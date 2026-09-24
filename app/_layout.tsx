@@ -9,7 +9,7 @@ function RootLayoutNav() {
   // console.log(isDark);
   return (
     <>
-      <StatusBar barStyle={isDark ? "light-content" : "light-content"} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <Stack>
         <Stack.Screen name="(home)" options={{ headerShown: false }} />
         <Stack.Screen

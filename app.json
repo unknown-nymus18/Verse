@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Verse",
-    "slug": "Verse",
+    "name": "zxcstream",
+    "slug": "zxcstream",
     "version": "1.0.0",
-    "orientation": "default",
+    "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "Verse",
+    "scheme": "zxcstream",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {

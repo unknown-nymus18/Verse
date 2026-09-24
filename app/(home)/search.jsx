@@ -103,7 +103,7 @@ export default function SearchScreen() {
               },
             ]}
             returnKeyType="search"
-            clearButtonMode="while-editing"
+            clearButtonMode="always"
           />
         </BlurView>
       </SafeAreaView>

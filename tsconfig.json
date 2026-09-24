@@ -15,6 +15,7 @@
     "app/(details)/index.jsx",
     "app/details.jsx",
     "app/(home)/index.tsx",
-    "app/(home)/search.jsx"
+    "app/(home)/search.jsx",
+    "app/(home)/_layout.jsx"
   ]
 }

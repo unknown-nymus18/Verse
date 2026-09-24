@@ -1,10 +1,9 @@
-import { StyleSheet, Switch, View } from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeProvider } from "../../components/ThemeProvider";
 
 export default function SettingsScreen() {
   const { isDark, colorScheme, toggleTheme } = useThemeProvider();
-  console.log(colorScheme.textPrimary);
   return (
     <View
       style={[
@@ -15,7 +14,21 @@ export default function SettingsScreen() {
       ]}
     >
       <SafeAreaView edges={["top"]}>
-        <Switch value={isDark} onChange={toggleTheme}></Switch>
+        <View
+          style={[
+            styles.listTile,
+            {
+              borderColor: "grey",
+              borderWidth: 1,
+              borderRadius: 12,
+            },
+          ]}
+        >
+          <Text style={[styles.title, { color: isDark ? "white" : "black" }]}>
+            Dark Mode
+          </Text>
+          <Switch value={isDark} onChange={toggleTheme}></Switch>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -26,6 +39,19 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "column",
     justifyContent: "flex-start",
-    alignItems: "center",
+  },
+  listTile: {
+    // flex: 1,
+    flexDirection: "row",
+    width: "auto",
+    justifyContent: "space-between",
+    alignContent: "center",
+    padding: 10,
+    marginHorizontal: 10,
+  },
+  title: {
+    alignSelf: "center",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

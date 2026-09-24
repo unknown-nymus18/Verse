@@ -1,5 +1,5 @@
 {
-  "name": "Verse",
+  "name": "zxcstream",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "babel-preset-expo": "^54.0.0",
     "react-native-dotenv": "^5.0.0",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2"
