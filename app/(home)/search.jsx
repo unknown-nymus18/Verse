@@ -121,6 +121,7 @@ export default function SearchScreen() {
         contentContainerStyle={[styles.list, { paddingTop: insets.top + 70 }]}
         numColumns={3}
         columnWrapperStyle={styles.row}
+        showsVerticalScrollIndicator={false}
         ListHeaderComponentStyle={
           results.length > 0 ? { height: 300, width: "100%" } : undefined
         }

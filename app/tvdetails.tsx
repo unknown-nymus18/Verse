@@ -1,34 +1,23 @@
+import { useThemeProvider } from "@/components/ThemeProvider";
+import { getTvDetails } from "@/services/ApiServices";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-
 import {
   ActivityIndicator,
-  FlatList,
-  Image,
   ImageBackground,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useThemeProvider } from "../components/ThemeProvider";
-import { getMovieDetails } from "../services/ApiServices";
-
-const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
-
-function imageUrl(path: string | null | undefined, size: string) {
-  return path ? `${IMAGE_BASE_URL}/${size}${path}` : null;
-}
 
 interface Genre {
   id: number;
   name: string;
 }
-
 interface CastMember {
   id: number;
   name: string;
@@ -44,27 +33,45 @@ interface RecommendationItem {
   media_type?: string;
 }
 
-interface MovieDetails {
+interface Season {
+  episode_count: number;
   id: number;
-  title?: string;
-  name?: string;
+  name: String;
   overview: string;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  release_date?: string;
-  first_air_date?: string;
-  runtime?: number;
+  poster_path: string;
+  season_number: number;
   vote_average: number;
-  genres?: Genre[];
+}
+interface TVProps {
+  adult: string;
+  backdrop_path: string;
+  genre: Genre;
+  in_production: boolean;
+  number_of_season: number;
+  original_name: string;
+  overview: string;
+  poster_path: string;
+  seasons: Season[];
+  vote_average: number;
+  tagline: string;
   credits?: { cast: CastMember[] };
   recommendations?: { results: RecommendationItem[] };
+  last_air_date: string;
 }
 
-export default function DetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
+function imageUrl(path: string | null | undefined, size: string) {
+  return path ? `${IMAGE_BASE_URL}/${size}${path}` : null;
+}
+
+export default function TvDetails() {
+  const { id } = useLocalSearchParams();
   const { isDark } = useThemeProvider();
 
-  // Dynamic Theme Colors
+  const [seriesData, setSeriesData] = useState<TVProps>();
+  const [isLoading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
   const bgColor = isDark ? "#08090b" : "#ffffff";
   const primaryText = isDark ? "#ffffff" : "#17181c";
   const secondaryText = isDark ? "#a1a1aa" : "#54565c";
@@ -76,20 +83,17 @@ export default function DetailsScreen() {
   const playBtnBg = isDark ? "#ffffff" : "#08090b";
   const playBtnText = isDark ? "#08090b" : "#ffffff";
 
-  const [movie, setMovie] = useState<MovieDetails | null>(null);
-  const [isLoading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  async function getMovieData() {
+  async function getSeriesData() {
     try {
       setLoading(true);
       setError(null);
-      const response = await getMovieDetails(id);
+      const response = await getTvDetails(id);
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`);
       }
-      const data: MovieDetails = await response.json();
-      setMovie(data);
+      const data: TVProps = await response.json();
+      console.log(data);
+      setSeriesData(data);
     } catch (e) {
       console.error("Unable to load movie details", e);
       setError("Couldn't load this movie right now.");
@@ -97,17 +101,11 @@ export default function DetailsScreen() {
       setLoading(false);
     }
   }
-
   useEffect(() => {
-    if (id) getMovieData();
+    if (id) {
+      getSeriesData();
+    }
   }, [id]);
-
-  function goToRecommendation(item: RecommendationItem) {
-    router.replace({
-      pathname: "/details",
-      params: { id: String(item.id) },
-    });
-  }
 
   if (isLoading) {
     return (
@@ -117,13 +115,13 @@ export default function DetailsScreen() {
     );
   }
 
-  if (error || !movie) {
+  if (error || !seriesData) {
     return (
       <View style={[styles.center, { backgroundColor: bgColor }]}>
         <Text style={styles.errorText}>{error ?? "Movie not found"}</Text>
         <Pressable
           style={[styles.retryButton, { backgroundColor: primaryText }]}
-          onPress={getMovieData}
+          onPress={getSeriesData}
         >
           <Text style={[styles.retryText, { color: bgColor }]}>Try again</Text>
         </Pressable>
@@ -131,11 +129,11 @@ export default function DetailsScreen() {
     );
   }
 
-  const displayTitle = movie.title || movie.name || "Untitled";
-  const releaseDate = movie.release_date || movie.first_air_date;
-  const cast = movie.credits?.cast ?? [];
-  const recommendations = movie.recommendations?.results ?? [];
-  const backdropUrl = imageUrl(movie.backdrop_path, "w780");
+  const displayTitle = seriesData.original_name || "Untitled";
+  const releaseDate = seriesData.last_air_date || "";
+  const cast = seriesData.credits?.cast ?? [];
+  const recommendations = seriesData.recommendations?.results ?? [];
+  const backdropUrl = imageUrl(seriesData.backdrop_path, "w780");
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
@@ -174,7 +172,7 @@ export default function DetailsScreen() {
                 router.push({
                   pathname: "/play",
                   params: {
-                    uri: `https://vidstuck.xyz/embed/movie/94605/1/1?branding=StreameX&server=atlas&loading=1&back=true`,
+                    uri: `https://vidstuck.xyz/embed/tv/94605/1/1?branding=StreameX&server=atlas&loading=1&back=true`,
                   },
                 });
               }}
@@ -202,155 +200,6 @@ export default function DetailsScreen() {
           </View>
         </View>
       </ImageBackground>
-
-      <ScrollView
-        style={styles.body}
-        contentContainerStyle={styles.bodyContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={[styles.title, { color: primaryText }]}>
-          {displayTitle}
-        </Text>
-
-        <View style={styles.stats}>
-          <Text style={[styles.statsText, { color: secondaryText }]}>
-            {movie.vote_average?.toFixed(1)}/10.0
-          </Text>
-          {!!releaseDate && (
-            <Text style={[styles.statsText, { color: secondaryText }]}>
-              {releaseDate}
-            </Text>
-          )}
-          {!!movie.runtime && (
-            <Text style={[styles.statsText, { color: secondaryText }]}>
-              {movie.runtime} min
-            </Text>
-          )}
-        </View>
-
-        {!!movie.genres?.length && (
-          <View style={styles.genreRow}>
-            {movie.genres.map((genre) => (
-              <View
-                key={genre.id}
-                style={[styles.genreChip, { backgroundColor: cardBg }]}
-              >
-                <Text style={[styles.genreText, { color: primaryText }]}>
-                  {genre.name}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {!!movie.overview && (
-          <>
-            <Text style={[styles.sectionTitle, { color: primaryText }]}>
-              Overview
-            </Text>
-            <Text style={[styles.overview, { color: secondaryText }]}>
-              {movie.overview}
-            </Text>
-          </>
-        )}
-
-        {!!cast.length && (
-          <>
-            <Text style={[styles.sectionTitle, { color: primaryText }]}>
-              Cast
-            </Text>
-            <FlatList
-              data={cast.slice(0, 15)}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item }) => {
-                const photoUrl = imageUrl(item.profile_path, "w200");
-                return (
-                  <View style={styles.castCard}>
-                    {photoUrl ? (
-                      <Image
-                        source={{ uri: photoUrl }}
-                        style={[
-                          styles.castPhoto,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.castPhoto,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    )}
-                    <Text
-                      style={[styles.castName, { color: primaryText }]}
-                      numberOfLines={1}
-                    >
-                      {item.name}
-                    </Text>
-                    <Text
-                      style={[styles.castCharacter, { color: subText }]}
-                      numberOfLines={1}
-                    >
-                      {item.character}
-                    </Text>
-                  </View>
-                );
-              }}
-            />
-          </>
-        )}
-
-        {!!recommendations.length && (
-          <>
-            <Text style={[styles.sectionTitle, { color: primaryText }]}>
-              Recommended
-            </Text>
-            <FlatList
-              data={recommendations.slice(0, 15)}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item }) => {
-                const recPosterUrl = imageUrl(item.poster_path, "w200");
-                return (
-                  <Pressable
-                    style={styles.recCard}
-                    onPress={() => goToRecommendation(item)}
-                  >
-                    {recPosterUrl ? (
-                      <Image
-                        source={{ uri: recPosterUrl }}
-                        style={[
-                          styles.recPoster,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.recPoster,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    )}
-                    <Text
-                      style={[styles.recTitle, { color: primaryText }]}
-                      numberOfLines={2}
-                    >
-                      {item.title || item.name}
-                    </Text>
-                  </Pressable>
-                );
-              }}
-            />
-          </>
-        )}
-      </ScrollView>
     </View>
   );
 }

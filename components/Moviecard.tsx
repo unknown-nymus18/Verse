@@ -1,59 +1,63 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  StyleProp,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
 import { useThemeProvider } from "./ThemeProvider";
 
 interface Props {
-  adult: boolean;
-  backdrop_path: string | null;
+  adult?: boolean;
+  backdrop_path?: string | null;
   id: number;
   title?: string;
   original_title?: string;
   name?: string;
   original_name?: string;
-  overview: string;
+  overview?: string;
   poster_path: string | null;
   media_type: "movie" | "tv";
-  original_language: string;
-  genre_ids: number[];
-  popularity: number;
+  original_language?: string;
+  genre_ids?: number[];
+  popularity?: number;
   release_date?: string;
   first_air_date?: string;
-  softcore: boolean;
-  video: boolean;
+  softcore?: boolean;
+  video?: boolean;
   vote_average: number;
-  vote_count: number;
+  vote_count?: number;
+  width?: number | `${number}%`;
+  style?: StyleProp<ViewStyle>;
 }
 
 export default function MovieCard({
-  adult,
-  backdrop_path: backdropPath,
   id,
   title: movieTitle,
   original_title: originalTitle,
   name: tvName,
   original_name: originalName,
-  overview,
   poster_path: posterPath,
   release_date: releaseDate,
   first_air_date: firstAirDate,
   media_type: mediaType,
-  original_language: originalLanguage,
-  genre_ids: genreIds,
-  popularity,
-  softcore,
-  video,
   vote_average: voteAverage,
-  vote_count: voteCount,
+  width,
+  style,
 }: Props) {
   const title =
     movieTitle || tvName || originalTitle || originalName || "Untitled";
   const year = (releaseDate ?? firstAirDate)?.slice(0, 4) ?? "-";
   const type = mediaType === "tv" ? "Series" : "Movie";
+  const pathRoute: "/details" | "/tvdetails" =
+    mediaType === "movie" ? "/details" : "/tvdetails";
 
   const { isDark } = useThemeProvider();
 
-  // Dynamic Theme Colors
   const textColor = isDark ? "#ffffff" : "#111111";
   const ratingColor = isDark ? "#d4d4d8" : "#222222";
   const detailColor = isDark ? "#a1a1aa" : "#777777";
@@ -62,10 +66,10 @@ export default function MovieCard({
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[styles.container, width != null && { width }, style]}
       onPress={() => {
         router.push({
-          pathname: "/details",
+          pathname: pathRoute,
           params: {
             id: String(id),
           },

@@ -2,11 +2,9 @@ import { Stack } from "expo-router";
 import { StatusBar } from "react-native";
 import { ThemeProvider, useThemeProvider } from "../components/ThemeProvider";
 
-// 1. Inner component consumes the context
 function RootLayoutNav() {
   const { isDark } = useThemeProvider();
 
-  // console.log(isDark);
   return (
     <>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
@@ -21,12 +19,15 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen name="play" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="tvdetails"
+          options={{ headerShown: false }}
+        ></Stack.Screen>
       </Stack>
     </>
   );
 }
 
-// 2. Outer component wraps the app with ThemeProvider
 export default function RootLayout() {
   return (
     <ThemeProvider>

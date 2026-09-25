@@ -12,6 +12,8 @@ import {
   View,
 } from "react-native";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { getAllMovies, getGenreMovies } from "../../services/ApiServices";
 
 import MovieCard from "@/components/Moviecard";
@@ -38,6 +40,7 @@ function chunk(items, size) {
 
 export default function HomeScreen() {
   const { isDark } = useThemeProvider();
+  const { top } = useSafeAreaInsets();
 
   // Dynamic theme colors
   const bgColor = isDark ? "#08090b" : "#ffffff";
@@ -101,7 +104,7 @@ export default function HomeScreen() {
   }
 
   async function loadMore() {
-    if (isLoadingMore || page >= 500) return;
+    if (isLoadingMore || page >= 10) return;
     setIsLoadingMore(true);
     try {
       await getData(page + 1);
@@ -147,6 +150,7 @@ export default function HomeScreen() {
             onRefresh={onRefresh}
             tintColor={textColor}
             colors={[textColor]}
+            progressViewOffset={top + 22}
           />
         }
       >
@@ -203,7 +207,7 @@ export default function HomeScreen() {
           <View key={rowIndex} style={styles.row}>
             {row.map((item, itemIndex) => (
               <MovieCard
-                key={item.id ?? `${rowIndex}-${itemIndex}`}
+                key={`${rowIndex}-${itemIndex}`}
                 adult={item.adult}
                 backdrop_path={item.backdrop_path}
                 id={item.id}
