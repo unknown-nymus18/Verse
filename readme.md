@@ -23,6 +23,15 @@ A mobile app for browsing, searching, and watching movies, TV series, and anime.
 | Search       | Search bar with live results grid (posters, ratings, year, type)      |
 | Title Detail | Full detail view with hero image, metadata, cast, and recommendations |
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/image1.png" width="200" alt="Search screen" />
+  <img src="screenshots/image2.png" width="200" alt="Title detail screen" />
+  <img src="screenshots/image3.png" width="200" alt="Title detail screen for a series" />
+  <img src="screenshots/image4.png" width="200" alt="Title detail screen" />
+</p>
+
 ## Tech Stack
 
 - Platform: [iOS / Android / React Native / Flutter / etc.]
