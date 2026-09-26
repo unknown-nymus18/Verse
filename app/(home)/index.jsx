@@ -15,6 +15,7 @@ import {
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// import { getGenreMovies, getTrendingMovies } from "../../services/ApiServices";
 import { getGenreMovies, getTrendingMovies } from "../../services/ApiServices";
 
 import { LinearGradient } from "expo-linear-gradient";

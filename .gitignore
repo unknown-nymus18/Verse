@@ -40,6 +40,5 @@ yarn-error.*
 /ios
 /android
 
-services/ApiServices.jsx
 .env
 env.d.ts

@@ -7,21 +7,15 @@
     "icon": "./assets/images/icon.png",
     "scheme": "zxcstream",
     "userInterfaceStyle": "automatic",
-    // "newArchEnabled": true,
-    // "splash": {
-    //   "image": "./assets/images/splash-icon.png",
-    //   "resizeMode": "contain",
-    //   "backgroundColor": "#ffffff"
-    // },
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.zxcstream.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      // "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -39,6 +33,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a00a055c-cd45-410e-ab21-b457744127fa"
+      }
     }
   }
 }
