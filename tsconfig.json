@@ -16,6 +16,7 @@
     "app/details.jsx",
     "app/(home)/index.tsx",
     "app/(home)/search.jsx",
-    "app/(home)/_layout.jsx"
+    "app/(home)/_layout.jsx",
+    "components/Moviecard.jsx"
   ]
 }

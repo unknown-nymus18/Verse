@@ -2,7 +2,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import MovieCard from "./Moviecard";
 import { useThemeProvider } from "./ThemeProvider";
 
-export default function GenreRow({ genreName, movies }) {
+export default function GenreRow({ genreName = "Top-10", movies }) {
   const { isDark } = useThemeProvider();
 
   const textColor = isDark ? "#ffffff" : "#17181c";

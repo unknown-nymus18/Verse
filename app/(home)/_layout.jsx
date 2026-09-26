@@ -18,17 +18,12 @@ const TABS_CONFIG = [
     icon: "search-outline",
     activeIcon: "search",
   },
+
   {
     name: "settings",
     label: "Settings",
     icon: "settings-outline",
     activeIcon: "settings-outline",
-  },
-  {
-    name: "library",
-    label: "Library",
-    icon: "bookmark-outline",
-    activeIcon: "bookmark-outline",
   },
 ];
 
@@ -85,7 +80,7 @@ export default function HomeTabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="search" options={{ title: "Search" }} />
-      <Tabs.Screen name="library" options={{ title: "Library" }} />
+      {/* <Tabs.Screen name="library" options={{ title: "Library" }} /> */}
       <Tabs.Screen name="settings" options={{ title: "Settings" }} />
       {/* <Tabs.Screen name="more" options={{ title: "More" }} /> */}
     </Tabs>

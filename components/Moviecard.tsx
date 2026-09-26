@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import {
-  Image,
+  ImageBackground,
   StyleProp,
   StyleSheet,
   Text,
@@ -63,6 +63,7 @@ export default function MovieCard({
   const detailColor = isDark ? "#a1a1aa" : "#777777";
   const posterBg = isDark ? "#18181b" : "#e5e5e5";
   const placeholderBg = isDark ? "#27272a" : "#d4d4d8";
+  const isReleased = new Date() < new Date(releaseDate!);
 
   return (
     <TouchableOpacity
@@ -77,12 +78,27 @@ export default function MovieCard({
       }}
     >
       {posterPath ? (
-        <Image
+        <ImageBackground
           style={[styles.poster, { backgroundColor: posterBg }]}
           source={{
             uri: `https://image.tmdb.org/t/p/w780${posterPath}`,
           }}
-        />
+        >
+          {isReleased && (
+            <View
+              style={{
+                position: "absolute",
+                bottom: 10,
+                alignSelf: "center",
+                backgroundColor: "red",
+                borderRadius: 5,
+                paddingHorizontal: 2,
+              }}
+            >
+              <Text style={{ fontSize: 14, color: "white" }}>Not Released</Text>
+            </View>
+          )}
+        </ImageBackground>
       ) : (
         <View style={[styles.poster, { backgroundColor: placeholderBg }]} />
       )}

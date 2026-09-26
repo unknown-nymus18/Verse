@@ -9,14 +9,14 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getAllMovies, getGenreMovies } from "../../services/ApiServices";
+import { getGenreMovies, getTrendingMovies } from "../../services/ApiServices";
 
-import MovieCard from "@/components/Moviecard";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 
@@ -28,15 +28,10 @@ const GENRES = {
   Horrow: 27,
   Mystery: 9648,
   "Sci-Fi": 878,
+  "TV-Film": 10770,
+  Thriller: 53,
+  Western: 37,
 };
-
-function chunk(items, size) {
-  const rows = [];
-  for (let i = 0; i < items.length; i += size) {
-    rows.push(items.slice(i, i + size));
-  }
-  return rows;
-}
 
 export default function HomeScreen() {
   const { isDark } = useThemeProvider();
@@ -50,18 +45,18 @@ export default function HomeScreen() {
   const [movies, setMovies] = useState([]);
   const [moviesByGenre, setMoviesByGenre] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   async function getData(pageToLoad = 1) {
     try {
-      const response = await getAllMovies(pageToLoad);
+      const response = await getTrendingMovies();
       if (!response.ok)
         throw new Error(`Request failed with status ${response.status}`);
 
       const data = await response.json();
-      const newMovies = data.results ?? [];
+      const newMovies = data.results.slice(0, 11) ?? [];
 
       setMovies((currentMovies) =>
         pageToLoad === 1 ? newMovies : [...currentMovies, ...newMovies],
@@ -131,7 +126,7 @@ export default function HomeScreen() {
   }
 
   const gridMovies = movies.slice(1, movies.length);
-  const rows = chunk(gridMovies, 3);
+  // const rows = chunk(gridMovies, 3);
   const featured = movies[0];
   const imageUrl = featured?.poster_path
     ? `https://image.tmdb.org/t/p/w780${featured.poster_path}`
@@ -142,7 +137,7 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
+        // onScroll={handleScroll}
         scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
@@ -170,6 +165,7 @@ export default function HomeScreen() {
               resizeMode="cover"
               source={imageUrl ? { uri: imageUrl } : undefined}
             >
+              <Text>{featured.title}</Text>
               <LinearGradient
                 pointerEvents="none"
                 colors={["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"]}
@@ -195,6 +191,13 @@ export default function HomeScreen() {
             </ImageBackground>
           </Pressable>
         )}
+
+        <GenreRow
+          key={"Top-10"}
+          genreName={"Top 10"}
+          movies={movies.slice(1, 11)}
+        ></GenreRow>
+
         {Object.keys(GENRES).map((genreName) => (
           <GenreRow
             key={genreName}
@@ -203,7 +206,7 @@ export default function HomeScreen() {
           />
         ))}
 
-        {rows.map((row, rowIndex) => (
+        {/* {rows.map((row, rowIndex) => (
           <View key={rowIndex} style={styles.row}>
             {row.map((item, itemIndex) => (
               <MovieCard
@@ -234,13 +237,7 @@ export default function HomeScreen() {
                 <View key={`spacer-${i}`} style={styles.spacer} />
               ))}
           </View>
-        ))}
-
-        {isLoadingMore && (
-          <View style={styles.loadingMore}>
-            <ActivityIndicator color={textColor} />
-          </View>
-        )}
+        ))} */}
       </ScrollView>
     </View>
   );
@@ -250,7 +247,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingMore: { paddingVertical: 20 },
-  list: { paddingBottom: 90 },
+  list: { paddingBottom: 110 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

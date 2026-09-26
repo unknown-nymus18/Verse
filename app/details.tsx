@@ -174,7 +174,8 @@ export default function DetailsScreen() {
                 router.push({
                   pathname: "/play",
                   params: {
-                    uri: `https://vidstuck.xyz/embed/movie/94605/1/1?branding=StreameX&server=atlas&loading=1&back=true`,
+                    id: id,
+                    type: "movie",
                   },
                 });
               }}
