@@ -35,19 +35,23 @@ export default function SearchScreen() {
   const inputBorder = isDark ? "#27272a" : "transparent";
 
   const [query, setQuery] = useState("");
-  const [allMovies, setAllMovies] = useState("");
+  const [allMovies, setAllMovies] = useState([]);
   const [results, setResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchPageNumber, setSearchPageNumber] = useState(1);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [trendingPageNumber, setTrendingPageNumber] = useState(1);
+  const [isLoadingMoreTrending, setIsLoadingMoreTrending] = useState(false);
+
+  const [searchResultsPage, setSearchResultsPage] = useState(1);
+  const [totalSearchPages, setTotalSearchPages] = useState(1);
+  const [isLoadingMoreResults, setIsLoadingMoreResults] = useState(false);
+
   const [isAtTop, setAtTop] = useState(true);
   const flatListRef = useRef(null);
 
   async function getallMoviesData(pageNumber = 1) {
     try {
-      console.log(pageNumber);
       const response = await getAllMovies(pageNumber);
       if (!response.ok)
         throw new Error(`Request failed with status ${response.status}`);
@@ -55,7 +59,7 @@ export default function SearchScreen() {
       const data = await response.json();
 
       const newMovies =
-        searchPageNumber === 1
+        pageNumber === 1
           ? (data.results ?? [])
           : [...allMovies, ...(data.results ?? [])];
 
@@ -67,39 +71,73 @@ export default function SearchScreen() {
     }
   }
 
-  async function loadMore() {
-    if (isLoadingMore || searchPageNumber > 8) return;
-    setIsLoadingMore(true);
+  async function loadMoreTrending() {
+    if (isLoadingMoreTrending || trendingPageNumber > 8) return;
+    setIsLoadingMoreTrending(true);
     try {
-      const newPageNumber = searchPageNumber + 1;
-      setSearchPageNumber(newPageNumber);
+      const newPageNumber = trendingPageNumber + 1;
+      setTrendingPageNumber(newPageNumber);
       await getallMoviesData(newPageNumber);
     } finally {
-      setIsLoadingMore(false);
+      setIsLoadingMoreTrending(false);
     }
   }
 
-  function handleScroll({ nativeEvent }) {
-    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-    // console.log(contentOffset.)
-    setAtTop(contentOffset.y > 100);
-    const paddingToBottom = 200;
-    const isNearBottom =
-      layoutMeasurement.height + contentOffset.y >=
-      contentSize.height - paddingToBottom;
-    if (isNearBottom) loadMore();
+  async function loadMoreResults() {
+    const trimmed = query.trim();
+    if (
+      trimmed.length === 0 ||
+      isLoadingMoreResults ||
+      searchResultsPage >= Math.min(totalSearchPages ?? 1, 10)
+    )
+      return;
+
+    setIsLoadingMoreResults(true);
+    try {
+      const nextPage = searchResultsPage + 1;
+      const response = await searchMovies(trimmed, nextPage);
+      if (!response.ok)
+        throw new Error(`Request failed with status ${response.status}`);
+      const data = await response.json();
+      setResults((prev) => [...prev, ...(data.results ?? [])]);
+      setSearchResultsPage(nextPage);
+      setTotalSearchPages(data.total_pages ?? 1);
+    } catch (error) {
+      console.error("Unable to load more search results", error);
+    } finally {
+      setIsLoadingMoreResults(false);
+    }
+  }
+
+  // Generalized scroll handler: pass in whichever load-more function
+  // matches the list currently being shown.
+  function handleScroll(loadMoreFn) {
+    return ({ nativeEvent }) => {
+      const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+      setAtTop(contentOffset.y > 100);
+      const paddingToBottom = 200;
+      const isNearBottom =
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom;
+      if (isNearBottom) loadMoreFn();
+    };
   }
 
   function scrollToTop() {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   }
+
   useEffect(() => {
     getallMoviesData();
+  }, []);
+
+  useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length === 0) {
       setIsSearching(false);
       setResults([]);
-
+      setSearchResultsPage(1);
+      setTotalSearchPages(1);
       return;
     }
 
@@ -108,11 +146,15 @@ export default function SearchScreen() {
 
     const timeout = setTimeout(async () => {
       try {
-        const response = await searchMovies(trimmed);
+        const response = await searchMovies(trimmed, 1);
         if (!response.ok)
           throw new Error(`Request failed with status ${response.status}`);
         const data = await response.json();
-        if (isCurrent) setResults(data.results ?? []);
+        if (isCurrent) {
+          setResults(data.results ?? []);
+          setSearchResultsPage(1);
+          setTotalSearchPages(data.total_pages ?? 1);
+        }
       } catch (error) {
         console.error("Search failed", error);
         if (isCurrent) setResults([]);
@@ -202,7 +244,7 @@ export default function SearchScreen() {
       {query === "" ? (
         <>
           <FlatList
-            onScroll={handleScroll}
+            onScroll={handleScroll(loadMoreTrending)}
             ref={flatListRef}
             data={allMovies}
             keyExtractor={(item, index) => `${item.id}-${index}`}
@@ -214,7 +256,9 @@ export default function SearchScreen() {
             columnWrapperStyle={styles.row}
             showsVerticalScrollIndicator={false}
             ListFooterComponent={() => {
-              if (isLoadingMore) return <ActivityIndicator></ActivityIndicator>;
+              if (isLoadingMoreTrending)
+                return <ActivityIndicator style={{ marginVertical: 16 }} />;
+              return null;
             }}
             renderItem={({ item, index }) => (
               <MovieCard
@@ -251,6 +295,7 @@ export default function SearchScreen() {
         </>
       ) : (
         <FlatList
+          onScroll={handleScroll(loadMoreResults)}
           data={results.slice(1)}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={[styles.list, { paddingTop: insets.top + 70 }]}
@@ -362,6 +407,11 @@ export default function SearchScreen() {
               media_type={item.media_type}
             />
           )}
+          ListFooterComponent={() => {
+            if (isLoadingMoreResults)
+              return <ActivityIndicator style={{ marginVertical: 16 }} />;
+            return null;
+          }}
           ListEmptyComponent={
             !isSearching && query.trim().length > 0 ? (
               <Text style={[styles.empty, { color: subTextColor }]}>
@@ -399,7 +449,6 @@ const styles = StyleSheet.create({
     height: "50%",
     flex: 1,
     flexDirection: "row",
-    // marginBottom: 16,
     marginBottom: 10,
     gap: 12,
     paddingHorizontal: 10,

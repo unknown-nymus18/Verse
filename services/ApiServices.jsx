@@ -1,7 +1,6 @@
-import { TMDB_BEARER_TOKEN } from "@env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const TOKEN = TMDB_BEARER_TOKEN;
+const TOKEN = process.env.EXPO_PUBLIC_TMDB_BEARER_TOKEN;
 const SUBTITLE_KEY = "subtitles";
 
 async function getAllMovies(pageToLoad) {
@@ -57,10 +56,9 @@ async function getMovieDetails(id) {
   return response;
 }
 
-async function searchMovies(trimmed) {
-  "https://api.themoviedb.org/3/search/multi?include_adult=false&language=en-US&page=1";
+async function searchMovies(trimmed, page = 1) {
   const response = await fetch(
-    `https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(trimmed)}&language=en-US&page=1&include_adult=false`,
+    `https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(trimmed)}&language=en-US&page=${page}&include_adult=false`,
     {
       headers: {
         accept: "application/json",

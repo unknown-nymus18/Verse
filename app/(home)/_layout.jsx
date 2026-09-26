@@ -2,7 +2,7 @@ import { useThemeProvider } from "@/components/ThemeProvider";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const TABS_CONFIG = [
@@ -31,6 +31,7 @@ export default function HomeTabsLayout() {
   const { isDark } = useThemeProvider();
 
   // Dynamic Theme Colors
+  const bgColor = isDark ? "#08090b" : "#ffffff";
   const activeColor = isDark ? "#ffffff" : "#000000";
   const inactiveColor = isDark ? "#71717a" : "#92929b";
   const blurTint = isDark ? "prominent" : "light";
@@ -43,40 +44,88 @@ export default function HomeTabsLayout() {
       screenOptions={{
         headerShown: false,
       }}
-      tabBar={({ navigation, state }) => (
-        <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
-          <BlurView
-            tint={blurTint}
-            intensity={80}
-            style={[styles.tabBar, { borderColor }]}
-          >
-            {TABS_CONFIG.map((tab) => {
-              const isFocused = state.routes[state.index]?.name === tab.name;
+      tabBar={({ navigation, state }) =>
+        Platform.OS == "ios" ? (
+          <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+            <BlurView
+              tint={blurTint}
+              intensity={80}
+              style={[styles.tabBar, { borderColor }]}
+            >
+              {TABS_CONFIG.map((tab) => {
+                const isFocused = state.routes[state.index]?.name === tab.name;
 
-              return (
-                <Pressable
-                  key={tab.name}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: isFocused }}
-                  onPress={() => navigation.navigate(tab.name)}
-                  style={styles.tab}
-                >
-                  <Ionicons
-                    name={isFocused ? tab.activeIcon : tab.icon}
-                    size={21}
-                    color={isFocused ? activeColor : inactiveColor}
-                  />
-                  {isFocused && (
-                    <Text style={[styles.activeLabel, { color: activeColor }]}>
-                      {tab.label}
-                    </Text>
-                  )}
-                </Pressable>
-              );
-            })}
-          </BlurView>
-        </SafeAreaView>
-      )}
+                return (
+                  <Pressable
+                    key={tab.name}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isFocused }}
+                    onPress={() => navigation.navigate(tab.name)}
+                    style={styles.tab}
+                  >
+                    <Ionicons
+                      name={isFocused ? tab.activeIcon : tab.icon}
+                      size={21}
+                      color={isFocused ? activeColor : inactiveColor}
+                    />
+                    {isFocused && (
+                      <Text
+                        style={[styles.activeLabel, { color: activeColor }]}
+                      >
+                        {tab.label}
+                      </Text>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </BlurView>
+          </SafeAreaView>
+        ) : (
+          <SafeAreaView
+            edges={["bottom"]}
+            style={{ backgroundColor: bgColor, margin: 0 }}
+          >
+            <View
+              style={[
+                styles.tabBar,
+                {
+                  padding: 10,
+                  flexDirection: "row",
+                  backgroundColor: bgColor,
+                  margin: 0,
+                },
+              ]}
+            >
+              {TABS_CONFIG.map((tab) => {
+                const isFocused = state.routes[state.index]?.name === tab.name;
+
+                return (
+                  <Pressable
+                    key={tab.name}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isFocused }}
+                    onPress={() => navigation.navigate(tab.name)}
+                    style={styles.tab}
+                  >
+                    <Ionicons
+                      name={isFocused ? tab.activeIcon : tab.icon}
+                      size={21}
+                      color={isFocused ? activeColor : inactiveColor}
+                    />
+                    {isFocused && (
+                      <Text
+                        style={[styles.activeLabel, { color: activeColor }]}
+                      >
+                        {tab.label}
+                      </Text>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </SafeAreaView>
+        )
+      }
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="search" options={{ title: "Search" }} />

@@ -99,24 +99,24 @@ export default function HomeScreen() {
     }
   }
 
-  async function loadMore() {
-    if (isLoadingMore || page >= 10) return;
-    setIsLoadingMore(true);
-    try {
-      await getData(page + 1);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }
+  // async function loadMore() {
+  //   if (isLoadingMore || page >= 10) return;
+  //   setIsLoadingMore(true);
+  //   try {
+  //     await getData(page + 1);
+  //   } finally {
+  //     setIsLoadingMore(false);
+  //   }
+  // }
 
-  function handleScroll({ nativeEvent }) {
-    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-    const paddingToBottom = 200;
-    const isNearBottom =
-      layoutMeasurement.height + contentOffset.y >=
-      contentSize.height - paddingToBottom;
-    if (isNearBottom) loadMore();
-  }
+  // function handleScroll({ nativeEvent }) {
+  //   const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+  //   const paddingToBottom = 200;
+  //   const isNearBottom =
+  //     layoutMeasurement.height + contentOffset.y >=
+  //     contentSize.height - paddingToBottom;
+  //   if (isNearBottom) loadMore();
+  // }
 
   if (isLoading) {
     return (
@@ -126,7 +126,7 @@ export default function HomeScreen() {
     );
   }
 
-  const gridMovies = movies.slice(1, movies.length);
+  // const gridMovies = movies.slice(1, movies.length);
   // const rows = chunk(gridMovies, 3);
   const featured = movies[0];
   const imageUrl = featured?.poster_path
@@ -145,7 +145,7 @@ export default function HomeScreen() {
             refreshing={isRefreshing}
             onRefresh={onRefresh}
             tintColor={textColor}
-            colors={[textColor]}
+            colors={[bgColor]}
             progressViewOffset={top + 22}
           />
         }

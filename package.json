@@ -37,7 +37,6 @@
   "devDependencies": {
     "@types/react": "~19.2.4",
     "babel-preset-expo": "~57.0.0",
-    "react-native-dotenv": "^5.0.0",
     "react-test-renderer": "19.1.0",
     "typescript": "~6.0.3"
   },

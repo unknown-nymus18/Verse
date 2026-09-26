@@ -378,7 +378,7 @@ export default function TvDetails() {
                   key={element.id}
                   label={element.name}
                   value={String(element.season_number)}
-                  style={{ color: primaryText }}
+                  style={{ color: bgColor, backgroundColor: bgColor }}
                   color={primaryText}
                 />
               ))}
