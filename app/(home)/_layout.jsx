@@ -20,6 +20,12 @@ const TABS_CONFIG = [
   },
 
   {
+    name: "library",
+    label: "Library",
+    icon: "bookmark-outline",
+    activeIcon: "bookmark-outline",
+  },
+  {
     name: "settings",
     label: "Settings",
     icon: "settings-outline",
@@ -86,15 +92,12 @@ export default function HomeTabsLayout() {
             style={{ backgroundColor: bgColor, margin: 0 }}
           >
             <View
-              style={[
-                styles.tabBar,
-                {
-                  padding: 10,
-                  flexDirection: "row",
-                  backgroundColor: bgColor,
-                  margin: 0,
-                },
-              ]}
+              style={{
+                padding: 10,
+                flexDirection: "row",
+                backgroundColor: bgColor,
+                margin: 0,
+              }}
             >
               {TABS_CONFIG.map((tab) => {
                 const isFocused = state.routes[state.index]?.name === tab.name;
@@ -129,7 +132,7 @@ export default function HomeTabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="search" options={{ title: "Search" }} />
-      {/* <Tabs.Screen name="library" options={{ title: "Library" }} /> */}
+      <Tabs.Screen name="library" options={{ title: "Library" }} />
       <Tabs.Screen name="settings" options={{ title: "Settings" }} />
       {/* <Tabs.Screen name="more" options={{ title: "More" }} /> */}
     </Tabs>

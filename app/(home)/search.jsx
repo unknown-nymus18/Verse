@@ -369,19 +369,23 @@ export default function SearchScreen() {
                         gap: 4,
                       }}
                     >
-                      <Ionicons name="star" size={13} color="#ffc400" />
-                      <Text
-                        style={{
-                          color: textColor,
-                          fontSize: 13,
-                          fontWeight: "600",
-                        }}
-                      >
-                        {topSearch.vote_average.toFixed(1)}
-                      </Text>
+                      {topSearch.vote_average && (
+                        <>
+                          <Ionicons name="star" size={13} color="#ffc400" />
+                          <Text
+                            style={{
+                              color: textColor,
+                              fontSize: 13,
+                              fontWeight: "600",
+                            }}
+                          >
+                            {topSearch.vote_average.toFixed(1)}
+                          </Text>
+                        </>
+                      )}
                     </View>
                     <Text style={{ color: subTextColor, fontSize: 13 }}>
-                      {topSearch.release_date}
+                      {topSearch.release_date || topSearch.first_air_date}
                     </Text>
                   </View>
                 </TouchableOpacity>

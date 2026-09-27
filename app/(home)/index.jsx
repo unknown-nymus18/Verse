@@ -1,5 +1,5 @@
 import GenreRow from "@/components/GenreRow";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useThemeProvider } from "../../components/ThemeProvider";
 
 import {
@@ -15,7 +15,6 @@ import {
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// import { getGenreMovies, getTrendingMovies } from "../../services/ApiServices";
 import { getGenreMovies, getTrendingMovies } from "../../services/ApiServices";
 
 import { LinearGradient } from "expo-linear-gradient";
@@ -26,13 +25,16 @@ const GENRES = {
   Animation: 16,
   Drama: 18,
   Fantasy: 14,
-  Horrow: 27,
+  Horror: 27,
   Mystery: 9648,
   "Sci-Fi": 878,
   "TV-Film": 10770,
   Thriller: 53,
   Western: 37,
 };
+
+// Computed once, not on every render
+const GENRE_ENTRIES = Object.entries(GENRES);
 
 export default function HomeScreen() {
   const { isDark } = useThemeProvider();
@@ -46,77 +48,76 @@ export default function HomeScreen() {
   const [movies, setMovies] = useState([]);
   const [moviesByGenre, setMoviesByGenre] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  // const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  async function getData(pageToLoad = 1) {
+  const getData = useCallback(async (isMountedRef) => {
     try {
       const response = await getTrendingMovies();
       if (!response.ok)
         throw new Error(`Request failed with status ${response.status}`);
 
       const data = await response.json();
-      const newMovies = data.results.slice(0, 11) ?? [];
-
-      setMovies((currentMovies) =>
-        pageToLoad === 1 ? newMovies : [...currentMovies, ...newMovies],
-      );
-      setPage(pageToLoad);
+      const newMovies = data.results?.slice(0, 11) ?? [];
+      if (isMountedRef.current) setMovies(newMovies);
     } catch (error) {
       console.error("Unable to load trending movies", error);
-    } finally {
-      setIsLoading(false);
     }
-  }
-
-  async function getGenreData() {
-    try {
-      const entries = await Promise.all(
-        Object.entries(GENRES).map(async ([name, id]) => {
-          const res = await getGenreMovies(id);
-          const data = await res.json();
-          return [name, data.results ?? []];
-        }),
-      );
-      setMoviesByGenre(Object.fromEntries(entries));
-    } catch (error) {
-      console.error("Unable to load genre movies", error);
-    }
-  }
-
-  useEffect(() => {
-    getData(1);
-    getGenreData();
   }, []);
 
-  async function onRefresh() {
+  // Fetch each genre independently: one slow or failing request no longer
+  // blocks the others, and each row appears as soon as its own data
+  // arrives instead of everything waiting on the slowest genre.
+  const getGenreData = useCallback(async (isMountedRef) => {
+    const requests = GENRE_ENTRIES.map(async ([name, id]) => {
+      try {
+        const res = await getGenreMovies(id);
+        if (!res.ok)
+          throw new Error(`Request failed with status ${res.status}`);
+        const data = await res.json();
+        if (isMountedRef.current) {
+          setMoviesByGenre((prev) => ({ ...prev, [name]: data.results ?? [] }));
+        }
+      } catch (error) {
+        console.error(`Unable to load ${name} movies`, error);
+      }
+    });
+    await Promise.allSettled(requests);
+  }, []);
+
+  useEffect(() => {
+    const isMountedRef = { current: true };
+    setIsLoading(true);
+    Promise.allSettled([
+      getData(isMountedRef),
+      getGenreData(isMountedRef),
+    ]).then(() => {
+      if (isMountedRef.current) setIsLoading(false);
+    });
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [getData, getGenreData]);
+
+  const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
+    const isMountedRef = { current: true };
     try {
-      await Promise.all([getData(1), getGenreData()]);
+      await Promise.allSettled([
+        getData(isMountedRef),
+        getGenreData(isMountedRef),
+      ]);
     } finally {
       setIsRefreshing(false);
     }
-  }
+  }, [getData, getGenreData]);
 
-  // async function loadMore() {
-  //   if (isLoadingMore || page >= 10) return;
-  //   setIsLoadingMore(true);
-  //   try {
-  //     await getData(page + 1);
-  //   } finally {
-  //     setIsLoadingMore(false);
-  //   }
-  // }
+  const featured = movies[0];
+  const imageUrl = featured?.poster_path
+    ? `https://image.tmdb.org/t/p/w780${featured.poster_path}`
+    : null;
 
-  // function handleScroll({ nativeEvent }) {
-  //   const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-  //   const paddingToBottom = 200;
-  //   const isNearBottom =
-  //     layoutMeasurement.height + contentOffset.y >=
-  //     contentSize.height - paddingToBottom;
-  //   if (isNearBottom) loadMore();
-  // }
+  // Avoid creating a new array reference on every render
+  const topTenMovies = useMemo(() => movies.slice(1, 11), [movies]);
 
   if (isLoading) {
     return (
@@ -126,19 +127,11 @@ export default function HomeScreen() {
     );
   }
 
-  // const gridMovies = movies.slice(1, movies.length);
-  // const rows = chunk(gridMovies, 3);
-  const featured = movies[0];
-  const imageUrl = featured?.poster_path
-    ? `https://image.tmdb.org/t/p/w780${featured.poster_path}`
-    : null;
-
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
       <ScrollView
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
-        // onScroll={handleScroll}
         scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
@@ -193,52 +186,15 @@ export default function HomeScreen() {
           </Pressable>
         )}
 
-        <GenreRow
-          key={"Top-10"}
-          genreName={"Top 10"}
-          movies={movies.slice(1, 11)}
-        ></GenreRow>
+        <GenreRow key="Top-10" genreName="Top 10" movies={topTenMovies} />
 
-        {Object.keys(GENRES).map((genreName) => (
+        {GENRE_ENTRIES.map(([genreName]) => (
           <GenreRow
             key={genreName}
             genreName={genreName}
             movies={moviesByGenre[genreName] ?? []}
           />
         ))}
-
-        {/* {rows.map((row, rowIndex) => (
-          <View key={rowIndex} style={styles.row}>
-            {row.map((item, itemIndex) => (
-              <MovieCard
-                key={`${rowIndex}-${itemIndex}`}
-                adult={item.adult}
-                backdrop_path={item.backdrop_path}
-                id={item.id}
-                title={item.title}
-                original_title={item.original_title}
-                name={item.name}
-                original_name={item.original_name}
-                overview={item.overview}
-                poster_path={item.poster_path}
-                media_type={item.media_type}
-                original_language={item.original_language}
-                genre_ids={item.genre_ids}
-                popularity={item.popularity}
-                release_date={item.release_date}
-                first_air_date={item.first_air_date}
-                softcore={item.softcore}
-                video={item.video}
-                vote_average={item.vote_average}
-                vote_count={item.vote_count}
-              />
-            ))}
-            {row.length < 3 &&
-              Array.from({ length: 3 - row.length }).map((_, i) => (
-                <View key={`spacer-${i}`} style={styles.spacer} />
-              ))}
-          </View>
-        ))} */}
       </ScrollView>
     </View>
   );
@@ -247,16 +203,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingMore: { paddingVertical: 20 },
   list: { paddingBottom: 110 },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-    paddingHorizontal: 10,
-  },
-  spacer: { flex: 1, marginHorizontal: 6 },
-
   heroWrapper: { height: 500, marginBottom: 40 },
   poster: {
     height: "100%",

@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const TOKEN = process.env.EXPO_PUBLIC_TMDB_BEARER_TOKEN;
 const SUBTITLE_KEY = "subtitles";
+const SAVED_KEY = "saved";
 
 async function getAllMovies(pageToLoad) {
   const response = await fetch(
@@ -131,6 +132,61 @@ async function getSubtitlesStorage() {
     return "english";
   }
 }
+async function getSavedItems() {
+  try {
+    const value = await AsyncStorage.getItem(SAVED_KEY);
+    return value !== null ? JSON.parse(value) : [];
+  } catch (error) {
+    console.error("Error reading saved items:", error);
+    return [];
+  }
+}
+
+async function isItemSaved(id, type) {
+  const saved = await getSavedItems();
+  return saved.some((item) => item.id === String(id) && item.type === type);
+}
+
+async function saveItem(id, type) {
+  try {
+    const saved = await getSavedItems();
+    const alreadySaved = saved.some(
+      (item) => item.id === String(id) && item.type === type,
+    );
+    if (alreadySaved) return saved;
+
+    const updated = [...saved, { id: String(id), type }];
+    await AsyncStorage.setItem(SAVED_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (error) {
+    console.error("Error saving item:", error);
+    return await getSavedItems();
+  }
+}
+
+async function removeSavedItem(id, type) {
+  try {
+    const saved = await getSavedItems();
+    const updated = saved.filter(
+      (item) => !(item.id === String(id) && item.type === type),
+    );
+    await AsyncStorage.setItem(SAVED_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (error) {
+    console.error("Error removing saved item:", error);
+    return await getSavedItems();
+  }
+}
+
+async function toggleSavedItem(id, type) {
+  try {
+    const isSaved = await isItemSaved(id, type);
+    isSaved ? removeSavedItem(id, type) : saveItem(id, type);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 const SUBTITLE_OPTIONS = [
   { label: "English", value: "english" },
@@ -144,12 +200,17 @@ export {
   getAllMovies,
   getGenreMovies,
   getMovieDetails,
+  getSavedItems,
   getSeasonDetails,
   getSubtitlesStorage,
   getTrendingMovies,
   getTvDetails,
+  isItemSaved,
+  removeSavedItem,
+  saveItem,
   searchMovies,
   setSubtitlesStorage,
-  SUBTITLE_OPTIONS
+  SUBTITLE_OPTIONS,
+  toggleSavedItem
 };
 

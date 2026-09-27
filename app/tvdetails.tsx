@@ -1,6 +1,11 @@
 import EpisodeCard from "@/components/EpisodeCard";
 import { useThemeProvider } from "@/components/ThemeProvider";
-import { getSeasonDetails, getTvDetails } from "@/services/ApiServices";
+import {
+  getSeasonDetails,
+  getTvDetails,
+  isItemSaved,
+  toggleSavedItem,
+} from "@/services/ApiServices";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Picker } from "@react-native-picker/picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,6 +23,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 interface Genre {
   id: number;
   name: string;
@@ -99,6 +105,7 @@ export default function TvDetails() {
   const [season, setSeason] = useState("1");
   const [seasonsData, setSeasonsData] = useState<SeasonsMap>({});
   const [isLoadingSeasons, setIsLoadingSeasons] = useState(false);
+  const [isSaved, setSaved] = useState<boolean>(false);
 
   const bgColor = isDark ? "#08090b" : "#ffffff";
   const primaryText = isDark ? "#ffffff" : "#17181c";
@@ -113,6 +120,7 @@ export default function TvDetails() {
 
   async function getAllSeasonsData(seasons: Season[]) {
     try {
+      setSaved(await isItemSaved(id, "tv"));
       setIsLoadingSeasons(true);
       const results = await Promise.allSettled(
         seasons.map(async (s) => {
@@ -160,6 +168,12 @@ export default function TvDetails() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function toggleSave() {
+    const response = await toggleSavedItem(id, "tv");
+    // console.log(response);
+    setSaved(response ? !isSaved : isSaved);
   }
 
   useEffect(() => {
@@ -242,10 +256,11 @@ export default function TvDetails() {
           </SafeAreaView>
           <View style={styles.actions}>
             <Pressable
+              onPress={toggleSave}
               style={[
                 styles.button,
                 {
-                  backgroundColor: listBtnBg,
+                  backgroundColor: isSaved ? "green" : listBtnBg,
                   borderColor: listBtnBorder,
                   borderWidth: 1,
                 },
@@ -253,7 +268,7 @@ export default function TvDetails() {
             >
               <Ionicons name="bookmark-outline" size={17} color={primaryText} />
               <Text style={[styles.listText, { color: primaryText }]}>
-                Add to List
+                {isSaved ? "Saved" : "Add to List"}
               </Text>
             </Pressable>
           </View>

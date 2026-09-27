@@ -16,7 +16,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeProvider } from "../components/ThemeProvider";
-import { getMovieDetails } from "../services/ApiServices";
+import {
+  getMovieDetails,
+  isItemSaved,
+  toggleSavedItem,
+} from "../services/ApiServices";
 
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
@@ -63,6 +67,7 @@ interface MovieDetails {
 export default function DetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isDark } = useThemeProvider();
+  const [isSaved, setSaved] = useState<boolean>(false);
 
   // Dynamic Theme Colors
   const bgColor = isDark ? "#08090b" : "#ffffff";
@@ -82,6 +87,7 @@ export default function DetailsScreen() {
 
   async function getMovieData() {
     try {
+      setSaved(await isItemSaved(id, "movie"));
       setLoading(true);
       setError(null);
       const response = await getMovieDetails(id);
@@ -98,8 +104,16 @@ export default function DetailsScreen() {
     }
   }
 
+  async function toggleSave() {
+    const response = await toggleSavedItem(id, "movie");
+    // console.log(response);
+    setSaved(response ? !isSaved : isSaved);
+  }
+
   useEffect(() => {
-    if (id) getMovieData();
+    if (id) {
+      getMovieData();
+    }
   }, [id]);
 
   function goToRecommendation(item: RecommendationItem) {
@@ -186,10 +200,11 @@ export default function DetailsScreen() {
               </Text>
             </Pressable>
             <Pressable
+              onPress={toggleSave}
               style={[
                 styles.button,
                 {
-                  backgroundColor: listBtnBg,
+                  backgroundColor: isSaved ? "green" : listBtnBg,
                   borderColor: listBtnBorder,
                   borderWidth: 1,
                 },
@@ -197,7 +212,8 @@ export default function DetailsScreen() {
             >
               <Ionicons name="bookmark-outline" size={17} color={primaryText} />
               <Text style={[styles.listText, { color: primaryText }]}>
-                Add to List
+                {isSaved ? "Saved" : "Add to List"}
+                {/* Add to List */}
               </Text>
             </Pressable>
           </View>

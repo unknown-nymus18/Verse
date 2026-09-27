@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { BlurView } from "expo-blur";
 import { router } from "expo-router";
 import {
   ImageBackground,
@@ -36,6 +37,7 @@ interface Props {
 }
 
 export default function MovieCard({
+  adult,
   id,
   title: movieTitle,
   original_title: originalTitle,
@@ -97,6 +99,20 @@ export default function MovieCard({
             >
               <Text style={{ fontSize: 14, color: "white" }}>Not Released</Text>
             </View>
+          )}
+
+          {adult && (
+            <BlurView
+              style={{
+                height: "100%",
+                width: "100%",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+              intensity={10}
+            >
+              <Text style={{ color: textColor }}>Adult Content</Text>
+            </BlurView>
           )}
         </ImageBackground>
       ) : (
