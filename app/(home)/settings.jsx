@@ -29,6 +29,7 @@ export default function SettingsScreen() {
   const cardBg = isDark ? "#18181b" : "#f1f1f3";
   const borderColor = isDark ? "#27272a" : "#e1e2e5";
   const accent = isDark ? "#ffffff" : "#08090b";
+  const bgColor = isDark ? "#08090b" : "#ffffff";
 
   const selectedLabel =
     SUBTITLE_OPTIONS.find((o) => o.value === subtitle)?.label ?? "English";
@@ -48,9 +49,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: colorScheme.background }]}
-    >
+    <View style={[styles.container, { backgroundColor: bgColor }]}>
       <SafeAreaView edges={["top"]} style={{ paddingTop: 20 }}>
         <View style={[styles.listTile, { borderColor }]}>
           <Text style={[styles.title, { color: textColor }]}>Dark Mode</Text>
@@ -86,6 +85,7 @@ export default function SettingsScreen() {
                     key={option.value}
                     label={option.label}
                     value={option.value}
+                    style={{ color: bgColor, backgroundColor: bgColor }}
                     color={textColor}
                   />
                 ))}
@@ -122,7 +122,7 @@ export default function SettingsScreen() {
               <Picker
                 selectedValue={subtitle}
                 onValueChange={(value) => selectSubtitle(value)}
-                itemStyle={{ color: textColor }}
+                itemStyle={{ color: textColor, backgroundColor: bgColor }}
               >
                 {SUBTITLE_OPTIONS.map((option) => (
                   <Picker.Item

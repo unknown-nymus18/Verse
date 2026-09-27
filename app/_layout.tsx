@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import { StatusBar } from "react-native";
+import { Platform, StatusBar } from "react-native";
 import { ThemeProvider, useThemeProvider } from "../components/ThemeProvider";
 
 function RootLayoutNav() {
@@ -23,7 +23,7 @@ function RootLayoutNav() {
           options={{
             headerShown: false,
             orientation: "all",
-            statusBarHidden: true,
+            statusBarHidden: Platform.OS === "ios" ? false : true,
           }}
         />
         <Stack.Screen
@@ -31,7 +31,7 @@ function RootLayoutNav() {
           options={{
             headerShown: false,
             orientation: "all",
-            statusBarHidden: true,
+            statusBarHidden: Platform.OS === "ios" ? false : true,
           }}
         ></Stack.Screen>
       </Stack>
