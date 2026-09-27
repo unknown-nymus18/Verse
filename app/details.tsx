@@ -220,154 +220,156 @@ export default function DetailsScreen() {
         </View>
       </ImageBackground>
 
-      <ScrollView
-        style={styles.body}
-        contentContainerStyle={styles.bodyContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={[styles.title, { color: primaryText }]}>
-          {displayTitle}
-        </Text>
-
-        <View style={styles.stats}>
-          <Text style={[styles.statsText, { color: secondaryText }]}>
-            {movie.vote_average?.toFixed(1)}/10.0
+      <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+        <ScrollView
+          style={styles.body}
+          contentContainerStyle={styles.bodyContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={[styles.title, { color: primaryText }]}>
+            {displayTitle}
           </Text>
-          {!!releaseDate && (
-            <Text style={[styles.statsText, { color: secondaryText }]}>
-              {releaseDate}
-            </Text>
-          )}
-          {!!movie.runtime && (
-            <Text style={[styles.statsText, { color: secondaryText }]}>
-              {movie.runtime} min
-            </Text>
-          )}
-        </View>
 
-        {!!movie.genres?.length && (
-          <View style={styles.genreRow}>
-            {movie.genres.map((genre) => (
-              <View
-                key={genre.id}
-                style={[styles.genreChip, { backgroundColor: cardBg }]}
-              >
-                <Text style={[styles.genreText, { color: primaryText }]}>
-                  {genre.name}
-                </Text>
-              </View>
-            ))}
+          <View style={styles.stats}>
+            <Text style={[styles.statsText, { color: secondaryText }]}>
+              {movie.vote_average?.toFixed(1)}/10.0
+            </Text>
+            {!!releaseDate && (
+              <Text style={[styles.statsText, { color: secondaryText }]}>
+                {releaseDate}
+              </Text>
+            )}
+            {!!movie.runtime && (
+              <Text style={[styles.statsText, { color: secondaryText }]}>
+                {movie.runtime} min
+              </Text>
+            )}
           </View>
-        )}
 
-        {!!movie.overview && (
-          <>
-            <Text style={[styles.sectionTitle, { color: primaryText }]}>
-              Overview
-            </Text>
-            <Text style={[styles.overview, { color: secondaryText }]}>
-              {movie.overview}
-            </Text>
-          </>
-        )}
+          {!!movie.genres?.length && (
+            <View style={styles.genreRow}>
+              {movie.genres.map((genre) => (
+                <View
+                  key={genre.id}
+                  style={[styles.genreChip, { backgroundColor: cardBg }]}
+                >
+                  <Text style={[styles.genreText, { color: primaryText }]}>
+                    {genre.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
 
-        {!!cast.length && (
-          <>
-            <Text style={[styles.sectionTitle, { color: primaryText }]}>
-              Cast
-            </Text>
-            <FlatList
-              data={cast.slice(0, 15)}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item }) => {
-                const photoUrl = imageUrl(item.profile_path, "w200");
-                return (
-                  <View style={styles.castCard}>
-                    {photoUrl ? (
-                      <Image
-                        source={{ uri: photoUrl }}
-                        style={[
-                          styles.castPhoto,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.castPhoto,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    )}
-                    <Text
-                      style={[styles.castName, { color: primaryText }]}
-                      numberOfLines={1}
-                    >
-                      {item.name}
-                    </Text>
-                    <Text
-                      style={[styles.castCharacter, { color: subText }]}
-                      numberOfLines={1}
-                    >
-                      {item.character}
-                    </Text>
-                  </View>
-                );
-              }}
-            />
-          </>
-        )}
+          {!!movie.overview && (
+            <>
+              <Text style={[styles.sectionTitle, { color: primaryText }]}>
+                Overview
+              </Text>
+              <Text style={[styles.overview, { color: secondaryText }]}>
+                {movie.overview}
+              </Text>
+            </>
+          )}
 
-        {!!recommendations.length && (
-          <>
-            <Text style={[styles.sectionTitle, { color: primaryText }]}>
-              Recommended
-            </Text>
-            <FlatList
-              data={recommendations.slice(0, 15)}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item }) => {
-                const recPosterUrl = imageUrl(item.poster_path, "w200");
-                return (
-                  <Pressable
-                    style={styles.recCard}
-                    onPress={() => goToRecommendation(item)}
-                  >
-                    {recPosterUrl ? (
-                      <Image
-                        source={{ uri: recPosterUrl }}
-                        style={[
-                          styles.recPoster,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.recPoster,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    )}
-                    <Text
-                      style={[styles.recTitle, { color: primaryText }]}
-                      numberOfLines={2}
+          {!!cast.length && (
+            <>
+              <Text style={[styles.sectionTitle, { color: primaryText }]}>
+                Cast
+              </Text>
+              <FlatList
+                data={cast.slice(0, 15)}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => String(item.id)}
+                contentContainerStyle={styles.horizontalList}
+                renderItem={({ item }) => {
+                  const photoUrl = imageUrl(item.profile_path, "w200");
+                  return (
+                    <View style={styles.castCard}>
+                      {photoUrl ? (
+                        <Image
+                          source={{ uri: photoUrl }}
+                          style={[
+                            styles.castPhoto,
+                            { backgroundColor: imagePlaceholder },
+                          ]}
+                        />
+                      ) : (
+                        <View
+                          style={[
+                            styles.castPhoto,
+                            { backgroundColor: imagePlaceholder },
+                          ]}
+                        />
+                      )}
+                      <Text
+                        style={[styles.castName, { color: primaryText }]}
+                        numberOfLines={1}
+                      >
+                        {item.name}
+                      </Text>
+                      <Text
+                        style={[styles.castCharacter, { color: subText }]}
+                        numberOfLines={1}
+                      >
+                        {item.character}
+                      </Text>
+                    </View>
+                  );
+                }}
+              />
+            </>
+          )}
+
+          {!!recommendations.length && (
+            <>
+              <Text style={[styles.sectionTitle, { color: primaryText }]}>
+                Recommended
+              </Text>
+              <FlatList
+                data={recommendations.slice(0, 15)}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => String(item.id)}
+                contentContainerStyle={styles.horizontalList}
+                renderItem={({ item }) => {
+                  const recPosterUrl = imageUrl(item.poster_path, "w200");
+                  return (
+                    <Pressable
+                      style={styles.recCard}
+                      onPress={() => goToRecommendation(item)}
                     >
-                      {item.title || item.name}
-                    </Text>
-                  </Pressable>
-                );
-              }}
-            />
-          </>
-        )}
-      </ScrollView>
+                      {recPosterUrl ? (
+                        <Image
+                          source={{ uri: recPosterUrl }}
+                          style={[
+                            styles.recPoster,
+                            { backgroundColor: imagePlaceholder },
+                          ]}
+                        />
+                      ) : (
+                        <View
+                          style={[
+                            styles.recPoster,
+                            { backgroundColor: imagePlaceholder },
+                          ]}
+                        />
+                      )}
+                      <Text
+                        style={[styles.recTitle, { color: primaryText }]}
+                        numberOfLines={2}
+                      >
+                        {item.title || item.name}
+                      </Text>
+                    </Pressable>
+                  );
+                }}
+              />
+            </>
+          )}
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }

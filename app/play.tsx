@@ -38,14 +38,14 @@ export default function VideoScreen() {
         allowsPictureInPictureMediaPlayback
         sharedCookiesEnabled
         originWhitelist={["*"]}
-        onError={(event) => console.log("WEBVIEW ERROR", event.nativeEvent)}
-        onHttpError={(event) => console.log("HTTP ERROR", event.nativeEvent)}
-        onNavigationStateChange={(event) =>
-          console.log("NAVIGATION", event.url)
-        }
-        onOpenWindow={(event) =>
-          console.log("OPEN WINDOW", event.nativeEvent.targetUrl)
-        }
+        // onError={(event) => console.log("WEBVIEW ERROR", event.nativeEvent)}
+        // onHttpError={(event) => console.log("HTTP ERROR", event.nativeEvent)}
+        // onNavigationStateChange={(event) =>
+        //   console.log("NAVIGATION", event.url)
+        // }
+        // onOpenWindow={(event) =>
+        //   console.log("OPEN WINDOW", event.nativeEvent.targetUrl)
+        // }
       />
     </SafeAreaView>
   );

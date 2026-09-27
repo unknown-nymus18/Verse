@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const TOKEN = process.env.EXPO_PUBLIC_TMDB_BEARER_TOKEN;
 const SUBTITLE_KEY = "subtitles";
 const SAVED_KEY = "saved";
+const WATCHING_KEY = "watching";
 
 async function getAllMovies(pageToLoad) {
   const response = await fetch(

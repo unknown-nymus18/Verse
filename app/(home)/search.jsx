@@ -33,6 +33,7 @@ export default function SearchScreen() {
   const subTextColor = isDark ? "#a1a1aa" : "#8b8d94";
   const inputBg = isDark ? "#18181b" : "#f1f1f3";
   const inputBorder = isDark ? "#27272a" : "transparent";
+  const blurTint = !isDark ? "dark" : "light";
 
   const [query, setQuery] = useState("");
   const [allMovies, setAllMovies] = useState([]);
@@ -114,7 +115,7 @@ export default function SearchScreen() {
   function handleScroll(loadMoreFn) {
     return ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-      setAtTop(contentOffset.y > 100);
+      setAtTop(!(contentOffset.y > 100));
       const paddingToBottom = 200;
       const isNearBottom =
         layoutMeasurement.height + contentOffset.y >=
@@ -196,6 +197,8 @@ export default function SearchScreen() {
             overflow: "hidden",
             borderRadius: styles.input.borderRadius,
           }}
+          blurReductionFactor={0}
+          tint={blurTint}
         >
           <TextInput
             value={query}
@@ -215,7 +218,7 @@ export default function SearchScreen() {
             clearButtonMode="always"
           />
         </BlurView>
-        {isAtTop && (
+        {!isAtTop && (
           <Pressable onPress={scrollToTop}>
             <View
               style={{

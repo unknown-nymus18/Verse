@@ -18,10 +18,21 @@ function RootLayoutNav() {
             headerShown: false,
           }}
         />
-        <Stack.Screen name="play" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="play"
+          options={{
+            headerShown: false,
+            orientation: "all",
+            statusBarHidden: true,
+          }}
+        />
         <Stack.Screen
           name="tvdetails"
-          options={{ headerShown: false }}
+          options={{
+            headerShown: false,
+            orientation: "all",
+            statusBarHidden: true,
+          }}
         ></Stack.Screen>
       </Stack>
     </>
