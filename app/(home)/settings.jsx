@@ -34,8 +34,6 @@ export default function SettingsScreen() {
   const selectedLabel =
     SUBTITLE_OPTIONS.find((o) => o.value === subtitle)?.label ?? "English";
 
-  // Load once on mount — the missing dependency array in the original
-  // caused this to re-run (and re-read storage) on every single render.
   useEffect(() => {
     (async () => {
       const stored = await getSubtitlesStorage();

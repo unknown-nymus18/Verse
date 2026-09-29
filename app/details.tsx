@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+// import { differenceInCalendarDays } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -112,6 +113,8 @@ export default function DetailsScreen() {
 
   useEffect(() => {
     if (id) {
+      // const days = differenceInCalendarDays(new Date(releaseDate!), new Date());
+      // console.log(days);
       getMovieData();
     }
   }, [id]);

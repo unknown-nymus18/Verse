@@ -9,7 +9,6 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 
@@ -64,9 +63,6 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // Fetch each genre independently: one slow or failing request no longer
-  // blocks the others, and each row appears as soon as its own data
-  // arrives instead of everything waiting on the slowest genre.
   const getGenreData = useCallback(async (isMountedRef) => {
     const requests = GENRE_ENTRIES.map(async ([name, id]) => {
       try {
@@ -74,14 +70,17 @@ export default function HomeScreen() {
         if (!res.ok)
           throw new Error(`Request failed with status ${res.status}`);
         const data = await res.json();
-        if (isMountedRef.current) {
-          setMoviesByGenre((prev) => ({ ...prev, [name]: data.results ?? [] }));
-        }
+        return [name, data.results ?? []];
       } catch (error) {
         console.error(`Unable to load ${name} movies`, error);
+        return [name, []];
       }
     });
-    await Promise.allSettled(requests);
+
+    const results = await Promise.all(requests);
+    if (isMountedRef.current) {
+      setMoviesByGenre((prev) => ({ ...prev, ...Object.fromEntries(results) }));
+    }
   }, []);
 
   useEffect(() => {
@@ -127,6 +126,10 @@ export default function HomeScreen() {
     );
   }
 
+  // if(!moviesByGenre.values()){
+  //   retru
+  // }
+
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
       <ScrollView
@@ -159,7 +162,6 @@ export default function HomeScreen() {
               resizeMode="cover"
               source={imageUrl ? { uri: imageUrl } : undefined}
             >
-              <Text>{featured.title}</Text>
               <LinearGradient
                 pointerEvents="none"
                 colors={["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"]}

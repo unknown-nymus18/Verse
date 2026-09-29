@@ -1,8 +1,9 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { memo } from "react";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 import MovieCard from "./Moviecard";
 import { useThemeProvider } from "./ThemeProvider";
 
-export default function GenreRow({ genreName = "Top-10", movies }) {
+function GenreRow({ genreName = "Top-10", movies }) {
   const { isDark } = useThemeProvider();
 
   const textColor = isDark ? "#ffffff" : "#17181c";
@@ -10,24 +11,32 @@ export default function GenreRow({ genreName = "Top-10", movies }) {
   return (
     <View style={styles.genreSection}>
       <Text style={[styles.genreTitle, { color: textColor }]}>{genreName}</Text>
-      <ScrollView
+      <FlatList
         horizontal
+        data={movies}
+        keyExtractor={(item) => String(item.id)}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.genreList}
-      >
-        {movies.map((item) => (
+        // Virtualization tuning: only keep a small window of off-screen
+        // cards mounted, since each card renders an image.
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews
+        renderItem={({ item }) => (
           <MovieCard
-            key={item.id}
             {...item}
             media_type={item.media_type ?? "movie"}
-            width={100}
+            width={120}
             style={styles.genreCard}
           />
-        ))}
-      </ScrollView>
+        )}
+      />
     </View>
   );
 }
+
+export default memo(GenreRow);
 
 const styles = StyleSheet.create({
   genreSection: { marginBottom: 24 },

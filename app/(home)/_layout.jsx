@@ -134,7 +134,6 @@ export default function HomeTabsLayout() {
       <Tabs.Screen name="search" options={{ title: "Search" }} />
       <Tabs.Screen name="library" options={{ title: "Library" }} />
       <Tabs.Screen name="settings" options={{ title: "Settings" }} />
-      {/* <Tabs.Screen name="more" options={{ title: "More" }} /> */}
     </Tabs>
   );
 }

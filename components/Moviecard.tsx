@@ -1,6 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { differenceInCalendarDays } from "date-fns";
 import { BlurView } from "expo-blur";
 import { router } from "expo-router";
+
+import { useEffect } from "react";
 import {
   ImageBackground,
   StyleProp,
@@ -65,7 +68,18 @@ export default function MovieCard({
   const detailColor = isDark ? "#a1a1aa" : "#777777";
   const posterBg = isDark ? "#18181b" : "#e5e5e5";
   const placeholderBg = isDark ? "#27272a" : "#d4d4d8";
-  const isReleased = new Date() < new Date(releaseDate!);
+  const daysDifference = differenceInCalendarDays(
+    new Date(),
+    new Date(mediaType === "movie" ? releaseDate! : firstAirDate!),
+  );
+  const isReleased = daysDifference > 0;
+  const isRecentlyReleased = 28 > daysDifference && isReleased;
+
+  useEffect(() => {
+    // if (title === "Runner") {
+    //   console.log(isRecentlyRelease);
+    // }
+  }, []);
 
   return (
     <TouchableOpacity
@@ -86,14 +100,29 @@ export default function MovieCard({
             uri: `https://image.tmdb.org/t/p/w780${posterPath}`,
           }}
         >
-          {isReleased && (
+          {isRecentlyReleased && (
+            <View
+              style={{
+                position: "absolute",
+                bottom: 10,
+                alignSelf: "center",
+                backgroundColor: "#016730",
+                paddingHorizontal: 2,
+              }}
+            >
+              <Text style={{ fontSize: 14, color: "white" }}>
+                Recently Added
+              </Text>
+            </View>
+          )}
+          {!isReleased && (
             <View
               style={{
                 position: "absolute",
                 bottom: 10,
                 alignSelf: "center",
                 backgroundColor: "red",
-                borderRadius: 5,
+                // borderRadius: 5,
                 paddingHorizontal: 2,
               }}
             >

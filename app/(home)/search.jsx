@@ -12,6 +12,7 @@ import {
   FlatList,
   ImageBackground,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -47,6 +48,7 @@ export default function SearchScreen() {
   const [searchResultsPage, setSearchResultsPage] = useState(1);
   const [totalSearchPages, setTotalSearchPages] = useState(1);
   const [isLoadingMoreResults, setIsLoadingMoreResults] = useState(false);
+  const [istrendindRefresing, setTrendingRefreshing] = useState(false);
 
   const [isAtTop, setAtTop] = useState(true);
   const flatListRef = useRef(null);
@@ -126,6 +128,18 @@ export default function SearchScreen() {
 
   function scrollToTop() {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }
+
+  async function onTrendingRefresh() {
+    setTrendingRefreshing(true);
+    const newTrendingPageNumber = 1;
+    setTrendingPageNumber(newTrendingPageNumber);
+
+    try {
+      await getallMoviesData(newTrendingPageNumber);
+    } finally {
+      setTrendingRefreshing(false);
+    }
   }
 
   useEffect(() => {
@@ -250,6 +264,12 @@ export default function SearchScreen() {
             onScroll={handleScroll(loadMoreTrending)}
             ref={flatListRef}
             data={allMovies}
+            refreshControl={
+              <RefreshControl
+                refreshing={istrendindRefresing}
+                onRefresh={onTrendingRefresh}
+              ></RefreshControl>
+            }
             keyExtractor={(item, index) => `${item.id}-${index}`}
             contentContainerStyle={[
               styles.list,
