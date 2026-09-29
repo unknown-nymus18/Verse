@@ -51,8 +51,6 @@ export default function LibraryScreen() {
     }
   }
 
-  // Refetch every time this screen comes into focus, so newly saved/removed
-  // items from other screens show up here without needing a full remount
   useFocusEffect(
     useCallback(() => {
       getAllSavedData();
@@ -71,29 +69,43 @@ export default function LibraryScreen() {
           You haven't saved anything yet.
         </Text>
       ) : (
-        <FlatList
-          data={showsData}
-          numColumns={3}
-          columnWrapperStyle={styles.row}
-          renderItem={({ item }) => (
-            <MovieCard
-              key={item.id}
-              adult={item.adult}
-              backdrop_path={item.backdrop_path}
-              id={item.id}
-              title={item.title}
-              original_title={item.original_title}
-              name={item.name}
-              original_name={item.original_name}
-              poster_path={item.poster_path}
-              release_date={item.release_date}
-              first_air_date={item.first_air_date}
-              vote_average={item.vote_average}
-              vote_count={item.vote_count}
-              media_type={item.media_type}
-            />
-          )}
-        />
+        <>
+          <FlatList
+            data={showsData}
+            numColumns={3}
+            columnWrapperStyle={styles.row}
+            ListHeaderComponent={
+              <Text
+                style={{
+                  fontSize: 20,
+                  color: textColor,
+                  marginLeft: 10,
+                  marginBottom: 10,
+                }}
+              >
+                Saved Movies/ TV Shows
+              </Text>
+            }
+            renderItem={({ item }) => (
+              <MovieCard
+                key={item.id}
+                adult={item.adult}
+                backdrop_path={item.backdrop_path}
+                id={item.id}
+                title={item.title}
+                original_title={item.original_title}
+                name={item.name}
+                original_name={item.original_name}
+                poster_path={item.poster_path}
+                release_date={item.release_date}
+                first_air_date={item.first_air_date}
+                vote_average={item.vote_average}
+                vote_count={item.vote_count}
+                media_type={item.media_type}
+              />
+            )}
+          />
+        </>
       )}
     </SafeAreaView>
   );
