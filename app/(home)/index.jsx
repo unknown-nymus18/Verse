@@ -1,9 +1,9 @@
 import GenreRow from "@/components/GenreRow";
+import HomeScreenSkeleton from "@/components/HomeScreenSkeleton";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useThemeProvider } from "../../components/ThemeProvider";
 
 import {
-  ActivityIndicator,
   Button,
   Dimensions,
   FlatList,
@@ -12,6 +12,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
 
@@ -152,11 +153,7 @@ export default function HomeScreen() {
   }, [getData, getGenreData]);
 
   if (isLoading) {
-    return (
-      <View style={[styles.loading, { backgroundColor: bgColor }]}>
-        <ActivityIndicator size="large" color={textColor} />
-      </View>
-    );
+    return <HomeScreenSkeleton></HomeScreenSkeleton>;
   }
 
   if (Object.keys(moviesByGenre).length === 0) {
@@ -224,6 +221,7 @@ export default function HomeScreen() {
                       resizeMode="cover"
                       source={imageUrl ? { uri: imageUrl } : undefined}
                     >
+                      <Text>{item.tagline}</Text>
                       <LinearGradient
                         pointerEvents="none"
                         colors={["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"]}
@@ -326,10 +324,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   activeDot: {
-    width: 20, // Slightly wider pill indicator for active item
-    backgroundColor: "#e50914", // Red/Brand active dot
+    width: 20,
+    backgroundColor: "#e50914",
   },
   inactiveDot: {
-    width: 8, // Small round dot for inactive items
+    width: 8,
   },
 });

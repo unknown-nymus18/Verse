@@ -186,7 +186,7 @@ export default function SearchScreen() {
 
   if (isLoading) {
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <ActivityIndicator size={"large"}></ActivityIndicator>
+      <ActivityIndicator size={"large"} color={textColor}></ActivityIndicator>
     </View>;
   }
 

@@ -99,6 +99,7 @@ export default function MovieCard({
           source={{
             uri: `https://image.tmdb.org/t/p/w780${posterPath}`,
           }}
+          imageStyle={{ borderRadius: styles.poster.borderRadius }}
         >
           {isRecentlyReleased && (
             <View

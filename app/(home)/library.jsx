@@ -1,14 +1,15 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import { FlatList, StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import GenreRow from "../../components/GenreRow";
 import { useThemeProvider } from "../../components/ThemeProvider";
 import {
   getMovieDetails,
   getSavedItems,
   getTvDetails,
 } from "../../services/ApiServices";
+
+import MovieCard from "@/components/Moviecard";
 
 export default function LibraryScreen() {
   const { isDark } = useThemeProvider();
@@ -33,8 +34,7 @@ export default function LibraryScreen() {
         if (!response.ok) throw new Error(`${response.status}`);
 
         const data = await response.json();
-        // attach media_type here, before filtering, so it can never
-        // get mismatched to the wrong item
+
         return { ...data, media_type: show.type };
       });
 
@@ -71,7 +71,29 @@ export default function LibraryScreen() {
           You haven't saved anything yet.
         </Text>
       ) : (
-        <GenreRow genreName="Saved Movies/ Tv" movies={showsData} />
+        <FlatList
+          data={showsData}
+          numColumns={3}
+          columnWrapperStyle={styles.row}
+          renderItem={({ item }) => (
+            <MovieCard
+              key={item.id}
+              adult={item.adult}
+              backdrop_path={item.backdrop_path}
+              id={item.id}
+              title={item.title}
+              original_title={item.original_title}
+              name={item.name}
+              original_name={item.original_name}
+              poster_path={item.poster_path}
+              release_date={item.release_date}
+              first_air_date={item.first_air_date}
+              vote_average={item.vote_average}
+              vote_count={item.vote_count}
+              media_type={item.media_type}
+            />
+          )}
+        />
       )}
     </SafeAreaView>
   );
@@ -82,5 +104,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "column",
     paddingTop: 20,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+    paddingHorizontal: 10,
   },
 });
