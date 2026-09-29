@@ -1,9 +1,11 @@
 import GenreRow from "@/components/GenreRow";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useThemeProvider } from "../../components/ThemeProvider";
 
 import {
   ActivityIndicator,
+  Dimensions,
+  FlatList,
   ImageBackground,
   Pressable,
   RefreshControl,
@@ -29,17 +31,16 @@ const GENRES = {
   "Sci-Fi": 878,
   "TV-Film": 10770,
   Thriller: 53,
-  Western: 37,
 };
 
-// Computed once, not on every render
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
 const GENRE_ENTRIES = Object.entries(GENRES);
 
 export default function HomeScreen() {
   const { isDark } = useThemeProvider();
   const { top } = useSafeAreaInsets();
 
-  // Dynamic theme colors
   const bgColor = isDark ? "#08090b" : "#ffffff";
   const textColor = isDark ? "#ffffff" : "#08090b";
   const posterBg = isDark ? "#18181b" : "#e5e5e5";
@@ -48,6 +49,45 @@ export default function HomeScreen() {
   const [moviesByGenre, setMoviesByGenre] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const flatListRef = useRef(null);
+  const activeIndexRef = useRef(0);
+
+  const topTen = movies.slice(0, 10);
+
+  const updateActiveIndex = (index) => {
+    activeIndexRef.current = index;
+    setActiveIndex(index);
+  };
+
+  useEffect(() => {
+    if (!topTen || topTen.length === 0) return;
+
+    const interval = setInterval(() => {
+      let nextIndex = activeIndexRef.current + 1;
+      if (nextIndex >= topTen.length) {
+        nextIndex = 0;
+      }
+
+      updateActiveIndex(nextIndex);
+
+      flatListRef.current?.scrollToIndex({
+        index: nextIndex,
+        animated: true,
+      });
+    }, 7000);
+
+    return () => clearInterval(interval);
+  }, [topTen.length]);
+
+  const onMomentumScrollEnd = (event) => {
+    const newIndex = Math.round(
+      event.nativeEvent.contentOffset.x / SCREEN_WIDTH,
+    );
+    updateActiveIndex(newIndex);
+  };
 
   const getData = useCallback(async (isMountedRef) => {
     try {
@@ -110,14 +150,6 @@ export default function HomeScreen() {
     }
   }, [getData, getGenreData]);
 
-  const featured = movies[0];
-  const imageUrl = featured?.poster_path
-    ? `https://image.tmdb.org/t/p/w780${featured.poster_path}`
-    : null;
-
-  // Avoid creating a new array reference on every render
-  const topTenMovies = useMemo(() => movies.slice(1, 11), [movies]);
-
   if (isLoading) {
     return (
       <View style={[styles.loading, { backgroundColor: bgColor }]}>
@@ -125,10 +157,6 @@ export default function HomeScreen() {
       </View>
     );
   }
-
-  // if(!moviesByGenre.values()){
-  //   retru
-  // }
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
@@ -140,55 +168,101 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            tintColor={textColor}
-            colors={[bgColor]}
             progressViewOffset={top + 22}
           />
         }
       >
-        {!!featured && (
-          <Pressable
-            style={styles.heroWrapper}
-            onPress={() =>
-              router.push({
-                pathname: "/details",
-                params: { id: String(featured.id) },
-              })
-            }
-          >
-            <ImageBackground
-              style={[styles.poster, { backgroundColor: posterBg }]}
-              imageStyle={styles.posterImage}
-              resizeMode="cover"
-              source={imageUrl ? { uri: imageUrl } : undefined}
-            >
-              <LinearGradient
-                pointerEvents="none"
-                colors={["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"]}
-                locations={[0, 0.5]}
-                style={styles.topFade}
-              />
-              <LinearGradient
-                pointerEvents="none"
-                colors={
-                  isDark
-                    ? ["rgba(8, 9, 11, 0)", "rgba(8, 9, 11, 0.65)", "#08090b"]
-                    : [
-                        "rgba(255, 255, 255, 0)",
-                        "rgba(255, 255, 255, 0.35)",
-                        "#ffffff",
-                      ]
-                }
-                locations={[0, 0.55, 1]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={styles.fade}
-              />
-            </ImageBackground>
-          </Pressable>
-        )}
+        {!!topTen && topTen.length > 0 && (
+          <View style={styles.carouselContainer}>
+            <FlatList
+              ref={flatListRef}
+              horizontal
+              data={topTen}
+              pagingEnabled={true}
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              onMomentumScrollEnd={onMomentumScrollEnd}
+              onScrollToIndexFailed={(info) => {
+                flatListRef.current?.scrollToOffset({
+                  offset: info.index * SCREEN_WIDTH,
+                  animated: true,
+                });
+              }}
+              keyExtractor={(item, index) => `${index}-${item.id}`}
+              renderItem={({ item }) => {
+                const imageUrl = item?.poster_path
+                  ? `https://image.tmdb.org/t/p/w780${item.poster_path}`
+                  : null;
+                return (
+                  <Pressable
+                    style={styles.heroWrapper}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/details",
+                        params: { id: String(item.id) },
+                      })
+                    }
+                  >
+                    <ImageBackground
+                      style={[styles.poster, { backgroundColor: posterBg }]}
+                      imageStyle={styles.posterImage}
+                      resizeMode="cover"
+                      source={imageUrl ? { uri: imageUrl } : undefined}
+                    >
+                      <LinearGradient
+                        pointerEvents="none"
+                        colors={["rgba(0,0,0,0.55)", "rgba(0,0,0,0)"]}
+                        locations={[0, 0.5]}
+                        style={styles.topFade}
+                      />
+                      <LinearGradient
+                        pointerEvents="none"
+                        colors={
+                          isDark
+                            ? [
+                                "rgba(8, 9, 11, 0)",
+                                "rgba(8, 9, 11, 0.65)",
+                                "#08090b",
+                              ]
+                            : [
+                                "rgba(255, 255, 255, 0)",
+                                "rgba(255, 255, 255, 0.35)",
+                                "#ffffff",
+                              ]
+                        }
+                        locations={[0, 0.55, 1]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 0, y: 1 }}
+                        style={styles.fade}
+                      />
+                    </ImageBackground>
+                  </Pressable>
+                );
+              }}
+            />
 
-        <GenreRow key="Top-10" genreName="Top 10" movies={topTenMovies} />
+            <View style={styles.paginationContainer}>
+              {topTen.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.dot,
+                    index === activeIndex
+                      ? styles.activeDot
+                      : [
+                          styles.inactiveDot,
+                          {
+                            backgroundColor: isDark
+                              ? "rgba(255,255,255,0.3)"
+                              : "rgba(0,0,0,0.2)",
+                          },
+                        ],
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+        )}
 
         {GENRE_ENTRIES.map(([genreName]) => (
           <GenreRow
@@ -206,7 +280,14 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
   list: { paddingBottom: 110 },
-  heroWrapper: { height: 500, marginBottom: 40 },
+  carouselContainer: {
+    position: "relative",
+    marginBottom: 20,
+  },
+  heroWrapper: {
+    width: SCREEN_WIDTH,
+    height: 500,
+  },
   poster: {
     height: "100%",
     width: "100%",
@@ -216,4 +297,24 @@ const styles = StyleSheet.create({
   posterImage: { height: "100%", width: "100%" },
   topFade: { position: "absolute", top: 0, left: 0, right: 0, height: "50%" },
   fade: { position: "absolute", right: 0, bottom: 0, left: 0, height: "44%" },
+  paginationContainer: {
+    position: "absolute",
+    bottom: 15,
+    flexDirection: "row",
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dot: {
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    width: 20, // Slightly wider pill indicator for active item
+    backgroundColor: "#e50914", // Red/Brand active dot
+  },
+  inactiveDot: {
+    width: 8, // Small round dot for inactive items
+  },
 });
