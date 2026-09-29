@@ -4,6 +4,7 @@ import { useThemeProvider } from "../../components/ThemeProvider";
 
 import {
   ActivityIndicator,
+  Button,
   Dimensions,
   FlatList,
   ImageBackground,
@@ -158,6 +159,20 @@ export default function HomeScreen() {
     );
   }
 
+  if (Object.keys(moviesByGenre).length === 0) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <Text style={{ color: textColor }}>No Movies were found</Text>
+        <Button title="Refresh Page" onPress={onRefresh}></Button>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
       <ScrollView
@@ -279,7 +294,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
-  list: { paddingBottom: 110 },
+  list: { paddingBottom: 30 },
   carouselContainer: {
     position: "relative",
     marginBottom: 20,
