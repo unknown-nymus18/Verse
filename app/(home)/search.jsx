@@ -241,13 +241,18 @@ export default function SearchScreen() {
               },
             ]}
           >
-            <BlurView
-              intensity={35}
-              tint={blurTint}
-              style={styles.scrollTopBlur}
+            <View
+              style={[
+                styles.scrollTopBlur,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(24, 24, 27, 0.92)"
+                    : "rgba(255, 255, 255, 0.92)",
+                },
+              ]}
             >
               <Ionicons name="arrow-up" size={22} color={textColor} />
-            </BlurView>
+            </View>
           </Pressable>
         )}
       </SafeAreaView>
@@ -391,7 +396,7 @@ export default function SearchScreen() {
                         gap: 4,
                       }}
                     >
-                      {topSearch.vote_average && (
+                      {topSearch.vote_average > 0 && (
                         <>
                           <Ionicons name="star" size={13} color="#ffc400" />
                           <Text
