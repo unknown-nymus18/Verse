@@ -1,11 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import DetailsScreenSkeleton from "../components/DetailsScreenSkeleton";
 // import { differenceInCalendarDays } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   ImageBackground,
@@ -13,6 +13,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -127,11 +128,7 @@ export default function DetailsScreen() {
   }
 
   if (isLoading) {
-    return (
-      <View style={[styles.center, { backgroundColor: bgColor }]}>
-        <ActivityIndicator size="large" color={primaryText} />
-      </View>
-    );
+    return <DetailsScreenSkeleton />;
   }
 
   if (error || !movie) {
@@ -185,7 +182,7 @@ export default function DetailsScreen() {
             </Pressable>
           </SafeAreaView>
           <View style={styles.actions}>
-            <Pressable
+            <TouchableOpacity
               style={[styles.button, { backgroundColor: playBtnBg }]}
               onPress={() => {
                 router.push({
@@ -193,6 +190,9 @@ export default function DetailsScreen() {
                   params: {
                     id: id,
                     type: "movie",
+                    title: displayTitle,
+                    poster_path: movie.poster_path ?? undefined,
+                    backdrop_path: movie.backdrop_path ?? undefined,
                   },
                 });
               }}
@@ -201,7 +201,7 @@ export default function DetailsScreen() {
               <Text style={[styles.playText, { color: playBtnText }]}>
                 Play Now
               </Text>
-            </Pressable>
+            </TouchableOpacity>
             <Pressable
               onPress={toggleSave}
               style={[
@@ -234,6 +234,7 @@ export default function DetailsScreen() {
           </Text>
 
           <View style={styles.stats}>
+            <Ionicons name="star" size={13} color="#ffc400" />
             <Text style={[styles.statsText, { color: secondaryText }]}>
               {movie.vote_average?.toFixed(1)}/10.0
             </Text>

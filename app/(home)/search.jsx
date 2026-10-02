@@ -1,7 +1,7 @@
 import MovieCard from "@/components/Moviecard";
+import SearchScreenSkeleton from "@/components/SearchScreenSkeleton";
 import { useThemeProvider } from "@/components/ThemeProvider";
 import { getAllMovies, searchMovies } from "@/services/ApiServices";
-import Entypo from "@expo/vector-icons/Entypo";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { BlurView } from "expo-blur";
@@ -184,12 +184,6 @@ export default function SearchScreen() {
     };
   }, [query]);
 
-  if (isLoading) {
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <ActivityIndicator size={"large"} color={textColor}></ActivityIndicator>
-    </View>;
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
       <SafeAreaView
@@ -233,32 +227,37 @@ export default function SearchScreen() {
           />
         </BlurView>
         {!isAtTop && (
-          <Pressable onPress={scrollToTop}>
-            <View
-              style={{
-                height: 40,
-                width: 40,
-                borderRadius: 100,
-                backgroundColor: textColor,
-                marginLeft: 10,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Scroll to top"
+            hitSlop={6}
+            onPress={scrollToTop}
+            style={({ pressed }) => [
+              styles.scrollTopButton,
+              {
+                borderColor: isDark ? "#3f3f46" : "rgba(23, 24, 28, 0.14)",
+                opacity: pressed ? 0.75 : 1,
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              },
+            ]}
+          >
+            <BlurView
+              intensity={35}
+              tint={blurTint}
+              style={styles.scrollTopBlur}
             >
-              <Entypo name="arrow-bold-up" size={30} color={bgColor} />
-            </View>
+              <Ionicons name="arrow-up" size={22} color={textColor} />
+            </BlurView>
           </Pressable>
         )}
       </SafeAreaView>
 
-      {isSearching && (
-        <ActivityIndicator
-          style={{ marginTop: insets.top + 70 }}
-          color={textColor}
+      {isLoading || isSearching ? (
+        <SearchScreenSkeleton
+          paddingTop={insets.top + 70}
+          showFeatured={query.trim().length > 0}
         />
-      )}
-
-      {query === "" ? (
+      ) : query === "" ? (
         <>
           <FlatList
             onScroll={handleScroll(loadMoreTrending)}
@@ -462,6 +461,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     fontSize: 15,
     width: "100%",
+  },
+  scrollTopButton: {
+    height: 44,
+    width: 44,
+    marginLeft: 10,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  scrollTopBlur: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   row: {
     flexDirection: "row",

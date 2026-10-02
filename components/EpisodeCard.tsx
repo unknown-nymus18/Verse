@@ -58,6 +58,8 @@ export default function EpisodeCard({
             type: "tv",
             episodeNumber: episodeNumber,
             seasonNumber: seasonNumber,
+            title: episode.name,
+            poster_path: episode.still_path ?? undefined,
           },
         });
       }}

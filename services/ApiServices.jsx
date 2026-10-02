@@ -4,6 +4,7 @@ const TOKEN = process.env.EXPO_PUBLIC_TMDB_BEARER_TOKEN;
 const SUBTITLE_KEY = "subtitles";
 const SAVED_KEY = "saved";
 const WATCHING_KEY = "watching";
+const DATASAVER_KEY = "datasaver";
 
 async function getAllMovies(pageToLoad) {
   const response = await fetch(
@@ -189,6 +190,38 @@ async function toggleSavedItem(id, type) {
   }
 }
 
+async function setDataSaver(value = false) {
+  try {
+    await AsyncStorage.setItem(DATASAVER_KEY, JSON.stringify(value));
+  } catch (e) {
+    console.log(`Error setting data saver: ${e}`);
+  }
+}
+
+async function getDataSaver() {
+  const DEFUALT_VALUE = false;
+  try {
+    const stored = await AsyncStorage.getItem(DATASAVER_KEY);
+    if (stored !== null) return JSON.parse(stored);
+    await setDataSaver(DEFUALT_VALUE);
+    return DEFUALT_VALUE;
+  } catch (e) {
+    console.log(`Error: ${e}`);
+    return DEFUALT_VALUE;
+  }
+}
+
+async function toggleDataSaver() {
+  try {
+    const currentValue = await getDataSaver();
+    const next = !currentValue;
+    await setDataSaver(next);
+    return next; // handy for updating UI state
+  } catch (e) {
+    console.log(`Error: ${e}`);
+  }
+}
+
 const SUBTITLE_OPTIONS = [
   { label: "English", value: "english" },
   { label: "Spanish", value: "spanish" },
@@ -199,6 +232,7 @@ const DEFAULT_OPTIONS = "english";
 export {
   DEFAULT_OPTIONS,
   getAllMovies,
+  getDataSaver,
   getGenreMovies,
   getMovieDetails,
   getSavedItems,
@@ -210,8 +244,10 @@ export {
   removeSavedItem,
   saveItem,
   searchMovies,
+  setDataSaver,
   setSubtitlesStorage,
   SUBTITLE_OPTIONS,
+  toggleDataSaver,
   toggleSavedItem
 };
 

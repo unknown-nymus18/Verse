@@ -14,7 +14,7 @@ function RootLayoutNav() {
           name="details"
           options={{
             title: "Details",
-            headerBackTitle: "back",
+            orientation: "portrait",
             headerShown: false,
           }}
         />
@@ -30,7 +30,7 @@ function RootLayoutNav() {
           name="tvdetails"
           options={{
             headerShown: false,
-            orientation: "all",
+            orientation: "portrait",
             statusBarHidden: Platform.OS === "ios" ? false : true,
           }}
         ></Stack.Screen>

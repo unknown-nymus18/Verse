@@ -1,3 +1,4 @@
+import DetailsScreenSkeleton from "@/components/DetailsScreenSkeleton";
 import EpisodeCard from "@/components/EpisodeCard";
 import { useThemeProvider } from "@/components/ThemeProvider";
 import {
@@ -187,11 +188,7 @@ export default function TvDetails() {
   }, [id]);
 
   if (isLoading) {
-    return (
-      <View style={[styles.center, { backgroundColor: bgColor }]}>
-        <ActivityIndicator size="large" color={primaryText} />
-      </View>
-    );
+    return <DetailsScreenSkeleton isTv />;
   }
 
   if (error || !seriesData) {
@@ -285,9 +282,12 @@ export default function TvDetails() {
           </Text>
 
           <View style={styles.stats}>
-            <Text style={[styles.statsText, { color: secondaryText }]}>
-              {seriesData.vote_average?.toFixed(1)}/10.0
-            </Text>
+            <>
+              <Ionicons name="star" size={13} color="#ffc400" />
+              <Text style={[styles.statsText, { color: secondaryText }]}>
+                {seriesData.vote_average?.toFixed(1)}/10.0
+              </Text>
+            </>
             {!!releaseDate && (
               <Text style={[styles.statsText, { color: secondaryText }]}>
                 {releaseDate}
@@ -474,53 +474,6 @@ export default function TvDetails() {
               />
             </>
           )}
-
-          {/* {!!recommendations.length && (
-          <>
-            <Text style={[styles.sectionTitle, { color: primaryText }]}>
-              Recommended
-            </Text>
-            <FlatList
-              data={recommendations.slice(0, 15)}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item }) => {
-                const recPosterUrl = imageUrl(item.poster_path, "w200");
-                return (
-                  <Pressable
-                    style={styles.recCard}
-                    onPress={() => goToRecommendation(item)}
-                  >
-                    {recPosterUrl ? (
-                      <Image
-                        source={{ uri: recPosterUrl }}
-                        style={[
-                          styles.recPoster,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.recPoster,
-                          { backgroundColor: imagePlaceholder },
-                        ]}
-                      />
-                    )}
-                    <Text
-                      style={[styles.recTitle, { color: primaryText }]}
-                      numberOfLines={2}
-                    >
-                      {item.title || item.name}
-                    </Text>
-                  </Pressable>
-                );
-              }}
-            />
-          </>
-        )} */}
         </ScrollView>
       </SafeAreaView>
     </View>

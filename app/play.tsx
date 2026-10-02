@@ -1,5 +1,5 @@
 import { getSubtitlesStorage } from "@/services/ApiServices";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,20 +11,66 @@ export default function VideoScreen() {
     type,
     seasonNumber = "1",
     episodeNumber = "1",
-  } = useLocalSearchParams();
+  } = useLocalSearchParams<{
+    id: string;
+    type?: string;
+    seasonNumber?: string;
+    episodeNumber?: string;
+  }>();
+  const navigation = useNavigation();
 
   const [subtitle, setSubtitle] = useState<string | null>(null);
 
   useEffect(() => {
+    navigation.setOptions({ gestureEnabled: true });
+  }, [navigation]);
+
+  useEffect(() => {
     (async () => {
-      const stored = await getSubtitlesStorage();
-      setSubtitle(stored);
+      const storedSubtitle = await getSubtitlesStorage();
+      setSubtitle(storedSubtitle ?? "en");
     })();
   }, []);
 
   if (subtitle === null) return null;
 
-  const VIDEO_URL = `https://vidstuck.xyz/embed/${type}/${id}/${seasonNumber}/${episodeNumber}?nextEpisode=true&autoplayNextEpisode=true&episodeSelector=true&overlay=true&color=8B5CF6&subtitle=${subtitle}&server=valstrax`;
+  const VIDEO_URL = `https://vidstuck.xyz/embed/${type}/${id}/${seasonNumber}/${episodeNumber}?subtitle=${subtitle}&server=valstrax`;
+
+  // Script injected before content loads to suppress popup redirects and click-jacking overlays
+  const AD_BLOCK_SCRIPT = `
+    (function() {
+      // 1. Block window.open popups entirely
+      window.open = function() { return null; };
+
+      // 2. Prevent click hijacking on elements attempting external redirects
+      const originalClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function() {
+        if (this.target === '_blank' || (this.href && !this.href.includes('vidstuck.xyz'))) {
+          return;
+        }
+        return originalClick.apply(this, arguments);
+      };
+
+      // 3. MutationObserver to auto-remove transparent ad overlays & popups
+      const removeAdOverlays = () => {
+        const overlays = document.querySelectorAll('div[style*="z-index"], iframe[src*="about:blank"], a[target="_blank"]');
+        overlays.forEach(el => {
+          if (el && el.parentNode && (el.style.zIndex > 100 || el.style.position === 'absolute' || el.style.position === 'fixed')) {
+            // Ensure video container itself is not deleted
+            if (!el.querySelector('video')) {
+              el.parentNode.removeChild(el);
+            }
+          }
+        });
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        removeAdOverlays();
+        setInterval(removeAdOverlays, 500);
+      });
+    })();
+    true;
+  `;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -38,14 +84,25 @@ export default function VideoScreen() {
         allowsPictureInPictureMediaPlayback
         sharedCookiesEnabled
         originWhitelist={["*"]}
-        // onError={(event) => console.log("WEBVIEW ERROR", event.nativeEvent)}
-        // onHttpError={(event) => console.log("HTTP ERROR", event.nativeEvent)}
-        // onNavigationStateChange={(event) =>
-        //   console.log("NAVIGATION", event.url)
-        // }
-        // onOpenWindow={(event) =>
-        //   console.log("OPEN WINDOW", event.nativeEvent.targetUrl)
-        // }
+        setSupportMultipleWindows={false}
+        onOpenWindow={(event) => event.preventDefault()}
+        allowsFullscreenVideo={true}
+        injectedJavaScriptBeforeContentLoaded={AD_BLOCK_SCRIPT}
+        onShouldStartLoadWithRequest={(request) => {
+          const { url } = request;
+
+          // Allow essential embed & CDN media requests only
+          const isAllowed =
+            url.includes("vidstuck.xyz") ||
+            url.includes("sacdn.hakunaymatata.com") ||
+            url.includes("about:blank") ||
+            url.includes(".m4s") ||
+            url.includes(".m3u8") ||
+            url.includes(".mp4");
+
+          // Block all external popup redirects on player clicks
+          return isAllowed;
+        }}
       />
     </SafeAreaView>
   );
@@ -53,5 +110,5 @@ export default function VideoScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
-  webview: { flex: 1 },
+  webview: { flex: 1, backgroundColor: "#000" },
 });

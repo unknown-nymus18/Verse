@@ -20,9 +20,11 @@ import {
 } from "../../services/ApiServices";
 
 export default function SettingsScreen() {
-  const { isDark, colorScheme, toggleTheme } = useThemeProvider();
+  const { isDark, colorScheme, toggleTheme, isDataSaver, onToggleDataSaver } =
+    useThemeProvider();
   const [subtitle, setSubtitle] = useState(DEFAULT_SUBTITLE);
   const [showIosPicker, setShowIosPicker] = useState(false);
+  const [dataSaver, setDataSaver] = useState(false);
 
   const textColor = isDark ? "#ffffff" : "#111111";
   const mutedColor = isDark ? "#a1a1aa" : "#8b8d94";
@@ -52,6 +54,10 @@ export default function SettingsScreen() {
         <View style={[styles.listTile, { borderColor }]}>
           <Text style={[styles.title, { color: textColor }]}>Dark Mode</Text>
           <Switch value={isDark} onChange={toggleTheme} />
+        </View>
+        <View style={[styles.listTile, { borderColor }]}>
+          <Text style={[styles.title, { color: textColor }]}>Data Saver</Text>
+          <Switch value={isDataSaver} onChange={onToggleDataSaver} />
         </View>
 
         <View style={[styles.listTile, { borderColor }]}>

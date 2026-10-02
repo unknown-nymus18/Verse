@@ -1,5 +1,16 @@
+import {
+  getDataSaver,
+  setDataSaver as saveDataSaver,
+} from "@/services/ApiServices";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Colors } from "../constants/Colors";
 
 const THEME_KEY = "isDark";
@@ -8,63 +19,86 @@ const ThemeContext = createContext();
 export function ThemeProvider({ children }) {
   const [isDark, setDarkState] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isDataSaver, setIsDataSaver] = useState(true);
 
   useEffect(() => {
-    async function loadStoredTheme() {
+    async function loadStoredSettings() {
       try {
-        const savedTheme = await AsyncStorage.getItem(THEME_KEY);
-        if (savedTheme !== null) {
-          setDarkState(JSON.parse(savedTheme));
-        }
+        const [savedTheme, savedDataSaver] = await Promise.all([
+          AsyncStorage.getItem(THEME_KEY),
+          getDataSaver(),
+        ]);
+
+        if (savedTheme !== null) setDarkState(JSON.parse(savedTheme));
+        setIsDataSaver(savedDataSaver);
       } catch (error) {
-        console.error("Failed to load theme from local storage:", error);
+        console.error("Failed to load settings from local storage:", error);
       } finally {
         setIsLoaded(true);
       }
     }
 
-    loadStoredTheme();
+    loadStoredSettings();
   }, []);
 
-  async function setDark(value) {
+  const setDark = useCallback(async (value) => {
     try {
       setDarkState(value);
       await AsyncStorage.setItem(THEME_KEY, JSON.stringify(value));
     } catch (error) {
       console.error("Failed to save theme to local storage:", error);
     }
-  }
+  }, []);
 
-  async function toggleTheme() {
-    try {
-      const nextValue = !isDark;
-      setDarkState(nextValue);
-      await AsyncStorage.setItem(THEME_KEY, JSON.stringify(nextValue));
-    } catch (error) {
-      console.error("Failed to save theme to local storage:", error);
-    }
-  }
+  const toggleTheme = useCallback(() => setDark(!isDark), [isDark, setDark]);
+
+  // Update state first so the switch responds instantly, then persist
+  const setDataSaverValue = useCallback((value) => {
+    setIsDataSaver(value);
+    saveDataSaver(value);
+  }, []);
+
+  const onToggleDataSaver = useCallback(
+    () => setDataSaverValue(!isDataSaver),
+    [isDataSaver, setDataSaverValue],
+  );
 
   const colorScheme = isDark ? Colors.dark : Colors.light;
 
-  // Prevent flash of wrong theme before AsyncStorage reads complete
-  if (!isLoaded) {
-    return null;
-  }
+  // Hooks must run before any early return
+  const value = useMemo(
+    () => ({
+      colorScheme,
+      toggleTheme,
+      isDark,
+      setDark,
+      isDataSaver,
+      setDataSaver: setDataSaverValue,
+      onToggleDataSaver,
+    }),
+    [
+      colorScheme,
+      toggleTheme,
+      isDark,
+      setDark,
+      isDataSaver,
+      setDataSaverValue,
+      onToggleDataSaver,
+    ],
+  );
+
+  // Prevent flash of wrong state before AsyncStorage reads complete
+  if (!isLoaded) return null;
 
   return (
-    <ThemeContext.Provider
-      value={{ colorScheme, toggleTheme, isDark, setDark }}
-    >
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 }
 
 export function useThemeProvider() {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error("useTheme must be used within a ThemeProvider");
+    throw new Error("useThemeProvider must be used within a ThemeProvider");
   }
   return context;
 }

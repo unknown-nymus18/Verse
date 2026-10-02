@@ -1,11 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { differenceInCalendarDays } from "date-fns";
 import { BlurView } from "expo-blur";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 
 import { useEffect } from "react";
 import {
-  ImageBackground,
   StyleProp,
   StyleSheet,
   Text,
@@ -61,13 +61,16 @@ export default function MovieCard({
   const pathRoute: "/details" | "/tvdetails" =
     mediaType === "movie" ? "/details" : "/tvdetails";
 
-  const { isDark } = useThemeProvider();
+  const { isDark, isDataSaver } = useThemeProvider();
 
   const textColor = isDark ? "#ffffff" : "#111111";
   const ratingColor = isDark ? "#d4d4d8" : "#222222";
   const detailColor = isDark ? "#a1a1aa" : "#777777";
   const posterBg = isDark ? "#18181b" : "#e5e5e5";
   const placeholderBg = isDark ? "#27272a" : "#d4d4d8";
+
+  const imageRes = isDataSaver ? "w154" : "w185";
+
   const daysDifference = differenceInCalendarDays(
     new Date(),
     new Date(mediaType === "movie" ? releaseDate! : firstAirDate!),
@@ -75,11 +78,7 @@ export default function MovieCard({
   const isReleased = daysDifference > 0;
   const isRecentlyReleased = 28 > daysDifference && isReleased;
 
-  useEffect(() => {
-    // if (title === "Runner") {
-    //   console.log(isRecentlyRelease);
-    // }
-  }, []);
+  useEffect(() => {}, [isDataSaver]);
 
   return (
     <TouchableOpacity
@@ -94,13 +93,28 @@ export default function MovieCard({
       }}
     >
       {posterPath ? (
-        <ImageBackground
-          style={[styles.poster, { backgroundColor: posterBg }]}
-          source={{
-            uri: `https://image.tmdb.org/t/p/w780${posterPath}`,
-          }}
-          imageStyle={{ borderRadius: styles.poster.borderRadius }}
+        <View
+          style={[
+            styles.poster,
+            {
+              backgroundColor: posterBg,
+              position: "relative",
+              overflow: "hidden",
+            },
+          ]}
         >
+          {/* Cached expo-image using StyleSheet.absoluteFill */}
+          <Image
+            source={{
+              uri: `https://image.tmdb.org/t/p/${imageRes}${posterPath}`,
+            }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
+
+          {/* Overlay Badges */}
           {isRecentlyReleased && (
             <View
               style={{
@@ -116,6 +130,7 @@ export default function MovieCard({
               </Text>
             </View>
           )}
+
           {!isReleased && (
             <View
               style={{
@@ -123,7 +138,6 @@ export default function MovieCard({
                 bottom: 10,
                 alignSelf: "center",
                 backgroundColor: "red",
-                // borderRadius: 5,
                 paddingHorizontal: 2,
               }}
             >
@@ -144,13 +158,15 @@ export default function MovieCard({
               <Text style={{ color: textColor }}>Adult Content</Text>
             </BlurView>
           )}
-        </ImageBackground>
+        </View>
       ) : (
         <View style={[styles.poster, { backgroundColor: placeholderBg }]} />
       )}
+
       <Text numberOfLines={1} style={[styles.title, { color: textColor }]}>
         {title}
       </Text>
+
       <View style={styles.metadata}>
         {voteAverage != null && (
           <>

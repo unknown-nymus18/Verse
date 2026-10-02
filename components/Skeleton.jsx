@@ -1,11 +1,11 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { useThemeProvider } from "./ThemeProvider";
 
 export default function Skeleton({ width, height, borderRadius = 8, style }) {
   const { isDark } = useThemeProvider();
-  const animatedValue = useRef(new Animated.Value(0)).current;
+  const [animatedValue] = useState(() => new Animated.Value(0));
 
   const baseColor = isDark ? "#18181b" : "#e5e5e5";
   const highlightColor = isDark ? "#27272a" : "#f4f4f5";
