@@ -19,15 +19,6 @@ export default function DetailsScreenSkeleton({ isTv = false }) {
           borderRadius={0}
           style={StyleSheet.absoluteFill}
         />
-        <View style={styles.heroContent}>
-          <SafeAreaView edges={["top"]}>
-            <Skeleton width={40} height={40} borderRadius={20} />
-          </SafeAreaView>
-          <View style={styles.actions}>
-            {!isTv && <Skeleton width={118} height={42} borderRadius={7} />}
-            <Skeleton width={128} height={42} borderRadius={7} />
-          </View>
-        </View>
       </View>
 
       <SafeAreaView style={styles.bottomSafeArea} edges={["bottom"]}>
