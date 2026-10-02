@@ -1,9 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { differenceInCalendarDays } from "date-fns";
 import { BlurView } from "expo-blur";
+import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-
 import { useEffect } from "react";
 import {
   StyleProp,
@@ -84,6 +84,7 @@ export default function MovieCard({
     <TouchableOpacity
       style={[styles.container, width != null && { width }, style]}
       onPress={() => {
+        Haptics.selectionAsync();
         router.push({
           pathname: pathRoute,
           params: {

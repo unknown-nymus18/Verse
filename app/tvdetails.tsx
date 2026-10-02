@@ -9,6 +9,7 @@ import {
 } from "@/services/ApiServices";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Picker } from "@react-native-picker/picker";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -253,7 +254,10 @@ export default function TvDetails() {
           </SafeAreaView>
           <View style={styles.actions}>
             <Pressable
-              onPress={toggleSave}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                toggleSave();
+              }}
               style={[
                 styles.button,
                 {

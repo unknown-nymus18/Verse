@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import DetailsScreenSkeleton from "../components/DetailsScreenSkeleton";
 // import { differenceInCalendarDays } from "date-fns";
+import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -185,6 +186,7 @@ export default function DetailsScreen() {
             <TouchableOpacity
               style={[styles.button, { backgroundColor: playBtnBg }]}
               onPress={() => {
+                Haptics.selectionAsync();
                 router.push({
                   pathname: "/play",
                   params: {
@@ -203,7 +205,10 @@ export default function DetailsScreen() {
               </Text>
             </TouchableOpacity>
             <Pressable
-              onPress={toggleSave}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                toggleSave();
+              }}
               style={[
                 styles.button,
                 {
