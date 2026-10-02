@@ -22,7 +22,7 @@ function RootLayoutNav() {
           name="play"
           options={{
             headerShown: false,
-            orientation: "all",
+            orientation: "portrait",
             statusBarHidden: Platform.OS === "ios" ? false : true,
           }}
         />

@@ -72,6 +72,56 @@ export default function VideoScreen() {
     true;
   `;
 
+  const FULLSCREEN_SCRIPT = `
+    (function() {
+      let isFullscreen = false;
+      let stateTimer;
+
+      const scheduleFullscreenEnter = () => {
+        window.clearTimeout(stateTimer);
+        stateTimer = window.setTimeout(() => {
+          if (isFullscreen) return;
+          isFullscreen = true;
+          window.ReactNativeWebView.postMessage("fullscreen-enter");
+        }, 200);
+      };
+
+      const fireFullscreenExit = () => {
+        window.clearTimeout(stateTimer);
+        if (!isFullscreen) return;
+        isFullscreen = false;
+        window.ReactNativeWebView.postMessage("fullscreen-exit");
+      };
+
+      const checkFullscreen = () => {
+        const nowFull = Boolean(
+          document.fullscreenElement || document.webkitFullscreenElement
+        );
+        if (nowFull) {
+          scheduleFullscreenEnter();
+        } else {
+          fireFullscreenExit();
+        }
+      };
+
+      document.addEventListener("fullscreenchange", checkFullscreen, true);
+      document.addEventListener("webkitfullscreenchange", checkFullscreen, true);
+      document.addEventListener("webkitbeginfullscreen", scheduleFullscreenEnter, true);
+      document.addEventListener("webkitendfullscreen", fireFullscreenExit, true);
+    })();
+    true;
+  `;
+
+  function handleWebViewMessage(message: string) {
+    if (message === "fullscreen-enter") {
+      navigation.setOptions({ orientation: "landscape" });
+    } else if (message === "fullscreen-exit") {
+      // Restore free rotation — the OS follows the device sensor
+      // back to portrait smoothly without forcing an animation.
+      navigation.setOptions({ orientation: "all" });
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <WebView
@@ -88,6 +138,8 @@ export default function VideoScreen() {
         onOpenWindow={(event) => event.preventDefault()}
         allowsFullscreenVideo={true}
         injectedJavaScriptBeforeContentLoaded={AD_BLOCK_SCRIPT}
+        injectedJavaScript={FULLSCREEN_SCRIPT}
+        onMessage={(event) => handleWebViewMessage(event.nativeEvent.data)}
         onShouldStartLoadWithRequest={(request) => {
           const { url } = request;
 
