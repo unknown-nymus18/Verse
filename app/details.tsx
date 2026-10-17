@@ -250,7 +250,7 @@ export default function DetailsScreen() {
             )}
             {!!movie.runtime && (
               <Text style={[styles.statsText, { color: secondaryText }]}>
-                {movie.runtime} min
+                {`${(movie.runtime / 60).toPrecision(1)}h ${movie.runtime % 60}min(s)`}
               </Text>
             )}
           </View>

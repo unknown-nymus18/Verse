@@ -1,4 +1,5 @@
 import { getSubtitlesStorage } from "@/services/ApiServices";
+import { useKeepAwake } from "expo-keep-awake";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
@@ -6,6 +7,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
 export default function VideoScreen() {
+  useKeepAwake();
+
   const {
     id,
     type,
@@ -34,7 +37,7 @@ export default function VideoScreen() {
 
   if (subtitle === null) return null;
 
-  const VIDEO_URL = `https://vidstuck.xyz/embed/${type}/${id}/${seasonNumber}/${episodeNumber}?subtitle=${subtitle}&server=valstrax`;
+  const VIDEO_URL = `https://vidstuck.cc/embed/${type}/${id}/${seasonNumber}/${episodeNumber}?subtitle=${subtitle}&server=valstrax`;
 
   // Script injected before content loads to suppress popup redirects and click-jacking overlays
   const AD_BLOCK_SCRIPT = `
@@ -116,8 +119,6 @@ export default function VideoScreen() {
     if (message === "fullscreen-enter") {
       navigation.setOptions({ orientation: "landscape" });
     } else if (message === "fullscreen-exit") {
-      // Restore free rotation — the OS follows the device sensor
-      // back to portrait smoothly without forcing an animation.
       navigation.setOptions({ orientation: "all" });
     }
   }
@@ -145,7 +146,7 @@ export default function VideoScreen() {
 
           // Allow essential embed & CDN media requests only
           const isAllowed =
-            url.includes("vidstuck.xyz") ||
+            url.includes("vidstuck.cc") ||
             url.includes("sacdn.hakunaymatata.com") ||
             url.includes("about:blank") ||
             url.includes(".m4s") ||

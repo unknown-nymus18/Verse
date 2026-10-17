@@ -50,8 +50,13 @@ export default function SearchScreen() {
   const [isLoadingMoreResults, setIsLoadingMoreResults] = useState(false);
   const [istrendindRefresing, setTrendingRefreshing] = useState(false);
 
+  const [showFilter, isShowFilter] = useState();
+  const [selectedFilter, selectedFiter] = useState("All");
+
   const [isAtTop, setAtTop] = useState(true);
   const flatListRef = useRef(null);
+
+  const FILTEROPTIONS = ["All", "Movies"];
 
   async function getallMoviesData(pageNumber = 1) {
     try {
@@ -226,6 +231,15 @@ export default function SearchScreen() {
             clearButtonMode="always"
           />
         </BlurView>
+        {/* <View style={{ justifyContent: "center", alignItems: "center" }}>
+          <Ionicons
+            name="filter"
+            size={24}
+            color={isDark ? "white" : "black"}
+            style={{ margin: 5 }}
+            onPress={() => console.log("pressed")}
+          />
+        </View> */}
         {!isAtTop && (
           <Pressable
             accessibilityRole="button"

@@ -50,7 +50,7 @@ export default function EpisodeCard({
     <Pressable
       style={[styles.container, { backgroundColor: cardBg }]}
       onPress={() => {
-        console.log(showId, episodeNumber);
+        if (stillUrl === null) return;
         router.push({
           pathname: "/play",
           params: {
