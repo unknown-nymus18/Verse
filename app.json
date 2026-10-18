@@ -34,7 +34,14 @@
       "expo-splash-screen",
       "expo-status-bar",
       "expo-web-browser",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save videos to your gallery."
+        }
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

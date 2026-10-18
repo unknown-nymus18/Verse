@@ -14,6 +14,7 @@
     "app/index.jsx",
     "app/(details)/index.jsx",
     "app/details.jsx",
+    "app/offline-player.tsx",
     "app/(home)/index.tsx",
     "app/(home)/search.jsx",
     "app/(home)/_layout.jsx",

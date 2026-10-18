@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
+import { useDownloadManager } from "../components/DownloadProvider";
 
 export default function VideoScreen() {
   useKeepAwake();
@@ -21,6 +22,7 @@ export default function VideoScreen() {
     episodeNumber?: string;
   }>();
   const navigation = useNavigation();
+  const { startDownload } = useDownloadManager();
 
   const [subtitle, setSubtitle] = useState<string | null>(null);
 
@@ -115,11 +117,67 @@ export default function VideoScreen() {
     true;
   `;
 
+  // Intercepts taps on the site's download links and sends them to the app
+  const ELEMENT_SCRIPT = `
+    (function() {
+      if (window.__downloadInterceptor) return;
+      window.__downloadInterceptor = true;
+
+      const intercept = (e) => {
+        const target = e.target;
+        const a = target && target.closest ? target.closest("a[download]") : null;
+        if (!a) return;
+
+        // Stop the site from opening the link itself
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        // Touch devices fire touchend then click, so only report once per tap
+        const now = Date.now();
+        if (window.__lastDownloadTap && now - window.__lastDownloadTap < 800) return;
+        window.__lastDownloadTap = now;
+
+        const quality = a.querySelector("p.font-medium");
+        const kind = a.querySelector("p.text-xs");
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: "download-request",
+          quality: quality ? quality.textContent.trim() : null,
+          kind: kind ? kind.textContent.trim() : null,
+          href: a.href
+        }));
+      };
+
+      document.addEventListener("click", intercept, true);
+      document.addEventListener("touchend", intercept, true);
+    })();
+    true;
+  `;
+
   function handleWebViewMessage(message: string) {
     if (message === "fullscreen-enter") {
       navigation.setOptions({ orientation: "landscape" });
     } else if (message === "fullscreen-exit") {
       navigation.setOptions({ orientation: "all" });
+    } else {
+      try {
+        const data = JSON.parse(message);
+        if (data.type === "download-request") {
+          console.log(`Download tapped: ${data.quality} -> ${data.href}`);
+          const label = data.quality ?? "video";
+          const fileName =
+            `${type ?? "video"}-${id}-S${seasonNumber}E${episodeNumber}-${label}`
+              .replace(/[^a-zA-Z0-9_-]/g, "_")
+              .concat(".mp4");
+          void startDownload({
+            quality: data.quality,
+            href: data.href,
+            fileName,
+          });
+        }
+      } catch {
+        console.warn("Unrecognized WebView message:", message);
+      }
     }
   }
 
@@ -135,14 +193,15 @@ export default function VideoScreen() {
         allowsPictureInPictureMediaPlayback
         sharedCookiesEnabled
         originWhitelist={["*"]}
-        setSupportMultipleWindows={false}
+        // setSupportMultipleWindows={false}
         onOpenWindow={(event) => event.preventDefault()}
         allowsFullscreenVideo={true}
         injectedJavaScriptBeforeContentLoaded={AD_BLOCK_SCRIPT}
-        injectedJavaScript={FULLSCREEN_SCRIPT}
+        injectedJavaScript={`${FULLSCREEN_SCRIPT}\n${ELEMENT_SCRIPT}`}
         onMessage={(event) => handleWebViewMessage(event.nativeEvent.data)}
         onShouldStartLoadWithRequest={(request) => {
           const { url } = request;
+          // console.log(url);
 
           // Allow essential embed & CDN media requests only
           const isAllowed =
@@ -152,6 +211,7 @@ export default function VideoScreen() {
             url.includes(".m4s") ||
             url.includes(".m3u8") ||
             url.includes(".mp4");
+          url.includes("workders.dev");
 
           // Block all external popup redirects on player clicks
           return isAllowed;

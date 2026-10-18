@@ -1,5 +1,7 @@
 import { Stack } from "expo-router";
 import { Platform, StatusBar } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { DownloadProvider } from "../components/DownloadProvider";
 import { ThemeProvider, useThemeProvider } from "../components/ThemeProvider";
 
 function RootLayoutNav() {
@@ -34,6 +36,7 @@ function RootLayoutNav() {
             statusBarHidden: Platform.OS === "ios" ? false : true,
           }}
         ></Stack.Screen>
+        <Stack.Screen name="offline-player" options={{ headerShown: false }} />
       </Stack>
     </>
   );
@@ -41,8 +44,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <RootLayoutNav />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <DownloadProvider>
+          <RootLayoutNav />
+        </DownloadProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
