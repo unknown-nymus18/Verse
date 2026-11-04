@@ -1,10 +1,11 @@
 import MovieCard from "@/components/Moviecard";
 import SearchScreenSkeleton from "@/components/SearchScreenSkeleton";
+import { deleteMeta, DOWNLOAD_DIR, ensureMeta } from "@/services/DownloadMeta";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
   Image,
@@ -15,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useDownloadManager } from "../../components/DownloadProvider";
 import { useThemeProvider } from "../../components/ThemeProvider";
 import {
   getMovieDetails,
@@ -23,8 +25,7 @@ import {
   removeSavedItem,
 } from "../../services/ApiServices";
 
-// Must match the folder and file naming used in play.tsx
-const DOWNLOAD_DIR = `${FileSystem.documentDirectory}downloads/`;
+// Must match the file naming used in play.tsx
 const FILE_PATTERN = /^([a-z]+)-(\d+)-S(\d+)E(\d+)-(.+)\.mp4$/;
 const MIN_VALID_BYTES = 100 * 1024; // ignore tiny / broken files
 
@@ -37,6 +38,7 @@ function formatSize(bytes) {
 export default function LibraryScreen() {
   const { isDark } = useThemeProvider();
   const router = useRouter();
+  const { downloadsVersion } = useDownloadManager();
 
   const [tab, setTab] = useState("saved"); // "saved" | "downloaded"
   const [showsData, setShowsData] = useState([]);
@@ -74,7 +76,8 @@ export default function LibraryScreen() {
     }
   }
 
-  // Reads the downloads folder and looks up the title/poster for each file
+  // Reads the downloads folder. Titles and posters come from files saved next
+  // to each video, so this works offline.
   async function loadDownloadedItems() {
     try {
       const folder = await FileSystem.getInfoAsync(DOWNLOAD_DIR);
@@ -108,22 +111,14 @@ export default function LibraryScreen() {
 
       const withDetails = await Promise.all(
         entries.map(async (entry) => {
-          try {
-            const response =
-              entry.media_type === "tv"
-                ? await getTvDetails(entry.id)
-                : await getMovieDetails(entry.id);
-            if (!response.ok) throw new Error(`${response.status}`);
-            const data = await response.json();
-            return {
-              ...entry,
-              title: data.title || data.name,
-              poster_path: data.poster_path,
-            };
-          } catch {
-            // Offline or lookup failed: still show the file
-            return { ...entry, title: null, poster_path: null };
-          }
+          // Uses the saved copy; for older downloads it looks them up online
+          // once and saves them, so they work offline from then on
+          const meta = await ensureMeta(entry.name, entry.id, entry.media_type);
+          return {
+            ...entry,
+            title: meta?.title ?? null,
+            poster: meta?.poster ?? null,
+          };
         }),
       );
 
@@ -159,6 +154,7 @@ export default function LibraryScreen() {
   async function deleteDownload(item) {
     try {
       await FileSystem.deleteAsync(item.uri, { idempotent: true });
+      await deleteMeta(item.name);
       setDownloads((current) => current.filter((d) => d.uri !== item.uri));
     } catch (e) {
       console.warn("Unable to delete download", e);
@@ -192,6 +188,13 @@ export default function LibraryScreen() {
       loadAllData();
     }, []),
   );
+
+  // Refreshes the Downloaded tab as soon as a download finishes
+  useEffect(() => {
+    if (downloadsVersion > 0) {
+      loadDownloadedItems();
+    }
+  }, [downloadsVersion]);
 
   const removeTitle = itemToRemove?.title || itemToRemove?.name || "this title";
 
@@ -318,11 +321,9 @@ export default function LibraryScreen() {
                   <View
                     style={[styles.poster, { backgroundColor: placeholderBg }]}
                   >
-                    {item.poster_path ? (
+                    {item.poster ? (
                       <Image
-                        source={{
-                          uri: `https://image.tmdb.org/t/p/w342${item.poster_path}`,
-                        }}
+                        source={{ uri: item.poster }}
                         style={styles.posterImage}
                       />
                     ) : (

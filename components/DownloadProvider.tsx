@@ -1,3 +1,4 @@
+import { ensureMeta } from "@/services/DownloadMeta";
 import { File } from "expo-file-system";
 import * as FileSystem from "expo-file-system/legacy";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
@@ -27,6 +28,8 @@ type DownloadRequest = {
   quality: string | null;
   href: string;
   fileName: string;
+  mediaId?: string; // used to save the title and poster
+  mediaType?: string;
 };
 
 type ActiveDownload = {
@@ -37,6 +40,7 @@ type ActiveDownload = {
 
 type DownloadContextValue = {
   startDownload: (request: DownloadRequest) => Promise<void>;
+  downloadsVersion: number; // goes up every time a download finishes
 };
 
 type FatalError = Error & { fatal?: boolean };
@@ -534,10 +538,17 @@ export function DownloadProvider({ children }: PropsWithChildren) {
   const [activeDownload, setActiveDownload] = useState<ActiveDownload | null>(
     null,
   );
+  const [downloadsVersion, setDownloadsVersion] = useState(0);
   const isDownloading = useRef(false);
 
   const startDownload = useCallback(
-    async ({ quality, href, fileName }: DownloadRequest) => {
+    async ({
+      quality,
+      href,
+      fileName,
+      mediaId,
+      mediaType,
+    }: DownloadRequest) => {
       if (isDownloading.current) {
         Alert.alert("Download in progress", "Wait for the current download.");
         return;
@@ -637,6 +648,20 @@ export function DownloadProvider({ children }: PropsWithChildren) {
         await FileSystem.moveAsync({ from: partUri, to: fileUri });
         console.log("Saved to:", fileUri, `(${size} bytes)`);
 
+        // Save the title and poster next to the video so they work offline.
+        // This never fails the download; it just gives up if the lookup fails.
+        if (mediaId) {
+          const saved = await ensureMeta(
+            fileName,
+            mediaId,
+            mediaType === "tv" ? "tv" : "movie",
+          );
+          console.log("Title and poster saved:", saved ? "yes" : "no");
+        }
+
+        // Tells the Library to refresh its Downloaded tab
+        setDownloadsVersion((version) => version + 1);
+
         Alert.alert(
           "Download complete",
           `${label} saved (${(size / (1024 * 1024)).toFixed(1)} MB).`,
@@ -689,8 +714,11 @@ export function DownloadProvider({ children }: PropsWithChildren) {
     [],
   );
 
-  // Stable value, so screens that use the manager don't re-render on every percent
-  const value = useMemo(() => ({ startDownload }), [startDownload]);
+  // Changes only when a download finishes, so screens don't re-render on every percent
+  const value = useMemo(
+    () => ({ startDownload, downloadsVersion }),
+    [startDownload, downloadsVersion],
+  );
 
   return (
     <DownloadContext.Provider value={value}>
