@@ -97,6 +97,9 @@ export default function SettingsScreen() {
             </View>
           )}
         </View>
+        <Text style={{ color: mutedColor, margin: 20 }}>
+          All content shown in this app not hosted by the creator of this app
+        </Text>
       </SafeAreaView>
 
       {Platform.OS === "ios" && (

@@ -1,23 +1,29 @@
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import DetailsScreenSkeleton from "../components/DetailsScreenSkeleton";
-// import { differenceInCalendarDays } from "date-fns";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import YoutubePlayer from "react-native-youtube-iframe";
 
 import {
   FlatList,
   Image,
   ImageBackground,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import DetailsScreenSkeleton from "../components/DetailsScreenSkeleton";
 import { useThemeProvider } from "../components/ThemeProvider";
 import {
   getMovieDetails,
@@ -48,7 +54,16 @@ interface RecommendationItem {
   title?: string;
   name?: string;
   poster_path: string | null;
-  media_type?: string;
+  vote_average?: number | null;
+  media_type?: "movie" | "tv" | null;
+}
+
+interface Video {
+  id: string;
+  key: string;
+  site: string;
+  official: boolean;
+  type: string;
 }
 
 interface MovieDetails {
@@ -65,12 +80,36 @@ interface MovieDetails {
   genres?: Genre[];
   credits?: { cast: CastMember[] };
   recommendations?: { results: RecommendationItem[] };
+  videos?: { results: Video[] };
+}
+
+const TYPE_RANK: Record<string, number> = { Trailer: 0, Teaser: 2, Clip: 4 };
+
+function pickTrailerKey(videos: Video[] = []): string | undefined {
+  const rank = (v: Video) => (TYPE_RANK[v.type] ?? 6) + (v.official ? 0 : 1);
+
+  return videos
+    .filter((v) => v.site === "YouTube")
+    .sort((a, b) => rank(a) - rank(b))[0]?.key;
+}
+
+function formatRuntime(minutes: number) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
 }
 
 export default function DetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isDark } = useThemeProvider();
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
   const [isSaved, setSaved] = useState<boolean>(false);
+  const [isPlaying, setPlaying] = useState(false);
+  const [movie, setMovie] = useState<MovieDetails | null>(null);
+  const [isLoading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Dynamic Theme Colors
   const bgColor = isDark ? "#08090b" : "#ffffff";
@@ -84,9 +123,7 @@ export default function DetailsScreen() {
   const playBtnBg = isDark ? "#ffffff" : "#08090b";
   const playBtnText = isDark ? "#08090b" : "#ffffff";
 
-  const [movie, setMovie] = useState<MovieDetails | null>(null);
-  const [isLoading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const playerHeight = Math.round((width * 9) / 16);
 
   async function getMovieData() {
     try {
@@ -109,17 +146,26 @@ export default function DetailsScreen() {
 
   async function toggleSave() {
     const response = await toggleSavedItem(id, "movie");
-    // console.log(response);
     setSaved(response ? !isSaved : isSaved);
   }
 
   useEffect(() => {
     if (id) {
-      // const days = differenceInCalendarDays(new Date(releaseDate!), new Date());
-      // console.log(days);
       getMovieData();
     }
   }, [id]);
+
+  // Opening another movie from "Recommended" must not keep the old trailer going
+  useEffect(() => {
+    setPlaying(false);
+  }, [id]);
+
+  // Stop the trailer when this screen loses focus (navigating to /play, etc.)
+  useFocusEffect(
+    useCallback(() => {
+      return () => setPlaying(false);
+    }, []),
+  );
 
   function goToRecommendation(item: RecommendationItem) {
     router.replace({
@@ -127,6 +173,21 @@ export default function DetailsScreen() {
       params: { id: String(item.id) },
     });
   }
+
+  const onStateChange = useCallback((state: string) => {
+    if (state === "ended") {
+      setPlaying(false);
+    }
+  }, []);
+
+  const startTrailer = useCallback(() => {
+    Haptics.selectionAsync();
+    setPlaying(true);
+  }, []);
+
+  const closeTrailer = useCallback(() => {
+    setPlaying(false);
+  }, []);
 
   if (isLoading) {
     return <DetailsScreenSkeleton />;
@@ -151,82 +212,134 @@ export default function DetailsScreen() {
   const cast = movie.credits?.cast ?? [];
   const recommendations = movie.recommendations?.results ?? [];
   const backdropUrl = imageUrl(movie.backdrop_path, "w780");
+  const videoId = pickTrailerKey(movie.videos?.results);
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
-      <ImageBackground
-        style={[styles.poster, { backgroundColor: imagePlaceholder }]}
-        imageStyle={styles.posterImage}
-        resizeMode="cover"
-        source={backdropUrl ? { uri: backdropUrl } : undefined}
-      >
-        <LinearGradient
-          pointerEvents="none"
-          colors={
-            isDark
-              ? ["rgba(8, 9, 11, 0)", "rgba(8, 9, 11, 0.65)", "#08090b"]
-              : [
-                  "rgba(255, 255, 255, 0)",
-                  "rgba(255, 255, 255, 0.35)",
-                  "#ffffff",
-                ]
-          }
-          locations={[0, 0.55, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.fade}
-        />
-        <View style={styles.content}>
-          <SafeAreaView edges={["top"]} style={styles.topSafeArea}>
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={22} color="#fff" />
-            </Pressable>
-          </SafeAreaView>
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: playBtnBg }]}
-              onPress={() => {
-                Haptics.selectionAsync();
-                router.push({
-                  pathname: "/play",
-                  params: {
-                    id: id,
-                    type: "movie",
-                    title: displayTitle,
-                    poster_path: movie.poster_path ?? undefined,
-                    backdrop_path: movie.backdrop_path ?? undefined,
+      {!isPlaying || !videoId ? (
+        <ImageBackground
+          style={[styles.poster, { backgroundColor: imagePlaceholder }]}
+          imageStyle={styles.posterImage}
+          resizeMode="cover"
+          source={backdropUrl ? { uri: backdropUrl } : undefined}
+        >
+          <LinearGradient
+            pointerEvents="none"
+            colors={
+              isDark
+                ? ["rgba(8, 9, 11, 0)", "rgba(8, 9, 11, 0.65)", "#08090b"]
+                : [
+                    "rgba(255, 255, 255, 0)",
+                    "rgba(255, 255, 255, 0.35)",
+                    "#ffffff",
+                  ]
+            }
+            locations={[0, 0.55, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.fade}
+          />
+
+          <View style={styles.content}>
+            <SafeAreaView edges={["top"]} style={styles.topSafeArea}>
+              <Pressable
+                onPress={() => router.back()}
+                style={styles.backButton}
+              >
+                <Ionicons name="arrow-back" size={22} color="#fff" />
+              </Pressable>
+            </SafeAreaView>
+
+            {!!videoId && (
+              <View style={styles.trailerOverlay}>
+                <Pressable
+                  onPress={startTrailer}
+                  accessibilityRole="button"
+                  accessibilityLabel="Play trailer"
+                  hitSlop={16}
+                >
+                  <FontAwesome5 name="play" size={30} color="white" />
+                </Pressable>
+              </View>
+            )}
+
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: playBtnBg }]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  router.push({
+                    pathname: "/play",
+                    params: {
+                      id: id,
+                      type: "movie",
+                      title: displayTitle,
+                      poster_path: movie.poster_path ?? undefined,
+                      backdrop_path: movie.backdrop_path ?? undefined,
+                    },
+                  });
+                }}
+              >
+                <Ionicons name="play" size={14} color={playBtnText} />
+                <Text style={[styles.playText, { color: playBtnText }]}>
+                  Play Now
+                </Text>
+              </TouchableOpacity>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  toggleSave();
+                }}
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: isSaved ? "green" : listBtnBg,
+                    borderColor: listBtnBorder,
+                    borderWidth: 1,
                   },
-                });
-              }}
-            >
-              <Ionicons name="play" size={14} color={playBtnText} />
-              <Text style={[styles.playText, { color: playBtnText }]}>
-                Play Now
-              </Text>
-            </TouchableOpacity>
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                toggleSave();
-              }}
-              style={[
-                styles.button,
-                {
-                  backgroundColor: isSaved ? "green" : listBtnBg,
-                  borderColor: listBtnBorder,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <Ionicons name="bookmark-outline" size={17} color={primaryText} />
-              <Text style={[styles.listText, { color: primaryText }]}>
-                {isSaved ? "Saved" : "Add to List"}
-                {/* Add to List */}
-              </Text>
-            </Pressable>
+                ]}
+              >
+                <Ionicons
+                  name="bookmark-outline"
+                  size={17}
+                  color={primaryText}
+                />
+                <Text style={[styles.listText, { color: primaryText }]}>
+                  {isSaved ? "Saved" : "Add to List"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
+        </ImageBackground>
+      ) : (
+        <View style={[styles.poster, styles.playerBox]}>
+          <YoutubePlayer
+            width={width}
+            height={playerHeight}
+            play={isPlaying}
+            videoId={videoId}
+            onChangeState={onStateChange}
+            onError={() => {
+              // Some trailers have embedding disabled; fall back to YouTube itself
+              setPlaying(false);
+              Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`);
+            }}
+            initialPlayerParams={{ rel: false, modestbranding: true }}
+          />
+          <Pressable
+            onPress={closeTrailer}
+            style={[
+              styles.backButton,
+              styles.closeButton,
+              { top: insets.top + 4 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Close trailer"
+          >
+            <Ionicons name="close" size={22} color="#fff" />
+          </Pressable>
         </View>
-      </ImageBackground>
+      )}
 
       <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
         <ScrollView
@@ -250,7 +363,7 @@ export default function DetailsScreen() {
             )}
             {!!movie.runtime && (
               <Text style={[styles.statsText, { color: secondaryText }]}>
-                {`${(movie.runtime / 60).toPrecision(1)}h ${movie.runtime % 60}min(s)`}
+                {formatRuntime(movie.runtime)}
               </Text>
             )}
           </View>
@@ -365,12 +478,25 @@ export default function DetailsScreen() {
                           ]}
                         />
                       )}
-                      <Text
-                        style={[styles.recTitle, { color: primaryText }]}
-                        numberOfLines={2}
-                      >
-                        {item.title || item.name}
-                      </Text>
+                      <View style={styles.recMeta}>
+                        {!!item.vote_average && (
+                          <>
+                            <Ionicons name="star" size={13} color="#ffc400" />
+                            <Text
+                              style={[styles.recTitle, { color: primaryText }]}
+                              numberOfLines={1}
+                            >
+                              {item.vote_average.toFixed(1)}
+                            </Text>
+                          </>
+                        )}
+                        <Text
+                          style={[styles.recTitle, { color: primaryText }]}
+                          numberOfLines={1}
+                        >
+                          {item.title || item.name}
+                        </Text>
+                      </View>
                     </Pressable>
                   );
                 }}
@@ -420,6 +546,14 @@ const styles = StyleSheet.create({
     height: "100%",
     width: "100%",
   },
+  playerBox: {
+    backgroundColor: "#000",
+    justifyContent: "center",
+  },
+  closeButton: {
+    position: "absolute",
+    left: 14,
+  },
   fade: {
     position: "absolute",
     right: 0,
@@ -436,6 +570,14 @@ const styles = StyleSheet.create({
   },
   topSafeArea: {
     width: "100%",
+  },
+  trailerOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingBottom: 22,
+    zIndex: 100,
   },
   backButton: {
     width: 40,
@@ -538,11 +680,18 @@ const styles = StyleSheet.create({
   recCard: {
     width: 110,
     marginRight: 12,
+    overflow: "hidden",
   },
   recPoster: {
     width: 110,
     height: 165,
     borderRadius: 8,
+  },
+  recMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 5,
   },
   recTitle: {
     fontSize: 12,

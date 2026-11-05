@@ -37,6 +37,7 @@ interface Props {
   vote_count?: number;
   width?: number | `${number}%`;
   style?: StyleProp<ViewStyle>;
+  replace?: boolean;
 }
 
 export default function MovieCard({
@@ -53,6 +54,7 @@ export default function MovieCard({
   vote_average: voteAverage,
   width,
   style,
+  replace = false,
 }: Props) {
   const title =
     movieTitle || tvName || originalTitle || originalName || "Untitled";
@@ -85,12 +87,21 @@ export default function MovieCard({
       style={[styles.container, width != null && { width }, style]}
       onPress={() => {
         Haptics.selectionAsync();
-        router.push({
-          pathname: pathRoute,
-          params: {
-            id: String(id),
-          },
-        });
+        if (replace) {
+          router.replace({
+            pathname: pathRoute,
+            params: {
+              id: String(id),
+            },
+          });
+        } else {
+          router.push({
+            pathname: pathRoute,
+            params: {
+              id: String(id),
+            },
+          });
+        }
       }}
     >
       {posterPath ? (

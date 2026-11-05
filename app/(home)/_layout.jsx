@@ -1,42 +1,50 @@
 import { useThemeProvider } from "@/components/ThemeProvider";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { BlurView } from "expo-blur";
-import { Tabs } from "expo-router";
+import * as Haptics from "expo-haptics";
+import { Tabs, useRouter } from "expo-router";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const TABS_CONFIG = [
+// Single source of truth: `name` must match the file name inside this folder.
+const TABS = [
   {
     name: "index",
+    path: "/",
     label: "Home",
     icon: "home-outline",
     activeIcon: "home",
   },
   {
     name: "search",
+    path: "/search",
     label: "Search",
     icon: "search-outline",
     activeIcon: "search",
   },
-
   {
     name: "library",
+    path: "/library",
     label: "Library",
     icon: "bookmark-outline",
-    activeIcon: "bookmark-outline",
+    activeIcon: "bookmark",
   },
   {
     name: "settings",
+    path: "/settings",
     label: "Settings",
     icon: "settings-outline",
-    activeIcon: "settings-outline",
+    activeIcon: "settings",
   },
 ];
 
-export default function HomeTabsLayout() {
-  const { isDark } = useThemeProvider();
+const TABS_BY_NAME = Object.fromEntries(TABS.map((tab) => [tab.name, tab]));
 
-  // Dynamic Theme Colors
+function AppTabBar(props) {
+  const { state, navigation } = props;
+  const { isDark } = useThemeProvider();
+  const router = useRouter();
+
   const bgColor = isDark ? "#08090b" : "#ffffff";
   const activeColor = isDark ? "#ffffff" : "#000000";
   const inactiveColor = isDark ? "#71717a" : "#92929b";
@@ -45,95 +53,105 @@ export default function HomeTabsLayout() {
     ? "rgba(255, 255, 255, 0.1)"
     : "rgba(0, 0, 0, 0.08)";
 
+  function handlePress(route, tab, isFocused) {
+    if (navigation?.emit && navigation?.navigate) {
+      // Let screens react to tab presses (scroll to top, reset a nested stack...)
+      const event = navigation.emit({
+        type: "tabPress",
+        target: route.key,
+        canPreventDefault: true,
+      });
+
+      if (!isFocused && !event.defaultPrevented) {
+        Haptics.selectionAsync();
+        navigation.navigate(route.name, route.params);
+      }
+      return;
+    }
+
+    // Fallback if the navigator doesn't pass `navigation` to the tab bar
+    if (!isFocused) {
+      Haptics.selectionAsync();
+      router.navigate(tab.path);
+    }
+  }
+
+  const items = state.routes.map((route, index) => {
+    const tab = TABS_BY_NAME[route.name];
+    if (!tab) return null; // ignore routes that aren't real tabs
+
+    const isFocused = state.index === index;
+
+    return (
+      <Pressable
+        key={route.key}
+        accessibilityRole="tab"
+        accessibilityLabel={tab.label}
+        accessibilityState={{ selected: isFocused }}
+        onPress={() => handlePress(route, tab, isFocused)}
+        onLongPress={() =>
+          navigation?.emit?.({ type: "tabLongPress", target: route.key })
+        }
+        style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
+      >
+        <Ionicons
+          name={isFocused ? tab.activeIcon : tab.icon}
+          size={21}
+          color={isFocused ? activeColor : inactiveColor}
+        />
+        {isFocused && (
+          <Text style={[styles.activeLabel, { color: activeColor }]}>
+            {tab.label}
+          </Text>
+        )}
+      </Pressable>
+    );
+  });
+
+  if (Platform.OS === "ios") {
+    return (
+      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+        <BlurView
+          tint={blurTint}
+          intensity={80}
+          style={[styles.tabBar, { borderColor }]}
+        >
+          {items}
+        </BlurView>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView edges={["bottom"]} style={{ backgroundColor: bgColor }}>
+      <View
+        style={[
+          styles.flatBar,
+          { backgroundColor: bgColor, borderTopColor: borderColor },
+        ]}
+      >
+        {items}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+export default function HomeTabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        freezeOnBlur: true, // stop re-rendering tabs you're not looking at
       }}
-      tabBar={({ navigation, state }) =>
-        Platform.OS == "ios" ? (
-          <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
-            <BlurView
-              tint={blurTint}
-              intensity={80}
-              style={[styles.tabBar, { borderColor }]}
-            >
-              {TABS_CONFIG.map((tab) => {
-                const isFocused = state.routes[state.index]?.name === tab.name;
-
-                return (
-                  <Pressable
-                    key={tab.name}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: isFocused }}
-                    onPress={() => navigation.navigate(tab.name)}
-                    style={styles.tab}
-                  >
-                    <Ionicons
-                      name={isFocused ? tab.activeIcon : tab.icon}
-                      size={21}
-                      color={isFocused ? activeColor : inactiveColor}
-                    />
-                    {isFocused && (
-                      <Text
-                        style={[styles.activeLabel, { color: activeColor }]}
-                      >
-                        {tab.label}
-                      </Text>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </BlurView>
-          </SafeAreaView>
-        ) : (
-          <SafeAreaView
-            edges={["bottom"]}
-            style={{ backgroundColor: bgColor, margin: 0 }}
-          >
-            <View
-              style={{
-                padding: 10,
-                flexDirection: "row",
-                backgroundColor: bgColor,
-                margin: 0,
-              }}
-            >
-              {TABS_CONFIG.map((tab) => {
-                const isFocused = state.routes[state.index]?.name === tab.name;
-
-                return (
-                  <Pressable
-                    key={tab.name}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: isFocused }}
-                    onPress={() => navigation.navigate(tab.name)}
-                    style={styles.tab}
-                  >
-                    <Ionicons
-                      name={isFocused ? tab.activeIcon : tab.icon}
-                      size={21}
-                      color={isFocused ? activeColor : inactiveColor}
-                    />
-                    {isFocused && (
-                      <Text
-                        style={[styles.activeLabel, { color: activeColor }]}
-                      >
-                        {tab.label}
-                      </Text>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-          </SafeAreaView>
-        )
-      }
+      tabBar={(props) => <AppTabBar {...props} />}
     >
-      <Tabs.Screen name="index" options={{ title: "Home" }} />
-      <Tabs.Screen name="search" options={{ title: "Search" }} />
-      <Tabs.Screen name="library" options={{ title: "Library" }} />
-      <Tabs.Screen name="settings" options={{ title: "Settings" }} />
+      {TABS.map((tab) => (
+        <Tabs.Screen
+          key={tab.name}
+          name={tab.name}
+          options={{ title: tab.label }}
+        />
+      ))}
     </Tabs>
   );
 }
@@ -159,6 +177,11 @@ const styles = StyleSheet.create({
     elevation: 8,
     overflow: "hidden",
   },
+  flatBar: {
+    padding: 10,
+    flexDirection: "row",
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   tab: {
     flex: 1,
     alignItems: "center",
@@ -166,5 +189,6 @@ const styles = StyleSheet.create({
     gap: 2,
     borderRadius: 14,
   },
+  tabPressed: { opacity: 0.6 },
   activeLabel: { fontSize: 11, fontWeight: "600" },
 });

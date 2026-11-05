@@ -1,5 +1,6 @@
 import DetailsScreenSkeleton from "@/components/DetailsScreenSkeleton";
 import EpisodeCard from "@/components/EpisodeCard";
+import MovieCard from "@/components/Moviecard";
 import { useThemeProvider } from "@/components/ThemeProvider";
 import {
   getSeasonDetails,
@@ -38,12 +39,34 @@ interface CastMember {
 }
 
 interface RecommendationItem {
+  adult?: boolean;
   id: number;
   title?: string;
+  original_title?: string;
   name?: string;
+  original_name?: string;
   poster_path: string | null;
-  media_type?: string;
+  media_type: "movie" | "tv";
+  original_language?: string;
+  release_date?: string;
+  first_air_date?: string;
+  vote_average: number;
+  width?: number | `${number}%`;
 }
+
+// adult,
+// id,
+// title: movieTitle,
+// original_title: originalTitle,
+// name: tvName,
+// original_name: originalName,
+// poster_path: posterPath,
+// release_date: releaseDate,
+// first_air_date: firstAirDate,
+// media_type: mediaType,
+// vote_average: voteAverage,
+// width,
+// style,
 
 interface Episode {
   id: number;
@@ -478,6 +501,35 @@ export default function TvDetails() {
               />
             </>
           )}
+          {recommendations && (
+            <FlatList
+              horizontal
+              data={recommendations}
+              keyExtractor={(item) => item.id.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[styles.recs, { gap: 16 }]} // Adds spacing between horizontal items
+              renderItem={({ item }) => (
+                <Pressable onPress={() => console.log("don't move")}>
+                  <MovieCard
+                    adult={item.adult}
+                    id={item.id}
+                    title={item.title}
+                    original_title={item.original_title}
+                    name={item.name}
+                    original_name={item.original_name}
+                    poster_path={item.poster_path}
+                    media_type={item.media_type}
+                    original_language={item.original_language}
+                    release_date={item.release_date}
+                    first_air_date={item.first_air_date}
+                    vote_average={item.vote_average}
+                    width={110}
+                    replace={true}
+                  />
+                </Pressable>
+              )}
+            />
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -644,17 +696,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: "center",
   },
-  recCard: {
-    width: 110,
-    marginRight: 12,
-  },
-  recPoster: {
-    width: 110,
-    height: 165,
-    borderRadius: 8,
-  },
-  recTitle: {
-    fontSize: 12,
-    marginTop: 6,
+  // recCard: {
+  //   width: 110,
+  //   marginRight: 12,
+  // },
+  // recPoster: {
+  //   width: 110,
+  //   height: 165,
+  //   borderRadius: 8,
+  // },
+  // recTitle: {
+  //   fontSize: 12,
+  //   marginTop: 6,
+  // },
+  recs: {
+    marginTop: 20,
+    marginRight: 20,
   },
 });

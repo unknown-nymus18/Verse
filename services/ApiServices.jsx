@@ -48,7 +48,7 @@ async function getGenreMovies(id) {
 
 async function getMovieDetails(id) {
   const response = await fetch(
-    `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=credits,recommendations`,
+    `https://api.themoviedb.org/3/movie/${id}?language=en-US&append_to_response=credits,recommendations,videos`,
     {
       headers: {
         accept: "application/json",
@@ -74,7 +74,7 @@ async function searchMovies(trimmed, page = 1) {
 
 async function getTvDetails(series_id) {
   const response = await fetch(
-    `https://api.themoviedb.org/3/tv/${series_id}?language=en-US`,
+    `https://api.themoviedb.org/3/tv/${series_id}?language=en-US&append_to_response=recommendations`,
     {
       headers: {
         accept: "application/json",
