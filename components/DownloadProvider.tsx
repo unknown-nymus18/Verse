@@ -458,7 +458,7 @@ async function downloadWhole(
 function DownloadProgress({ download }: { download: ActiveDownload | null }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { colorScheme } = useThemeProvider();
+  const { colors } = useThemeProvider();
   const [expanded, setExpanded] = useState(true);
   const isActive = download !== null;
 
@@ -482,13 +482,13 @@ function DownloadProgress({ download }: { download: ActiveDownload | null }) {
 
   return (
     <View pointerEvents="none" style={styles.overlay}>
-      <View style={[styles.line, { backgroundColor: colorScheme.border }]}>
+      <View style={[styles.line, { backgroundColor: colors.border }]}>
         <View
           style={[
             styles.lineFill,
             {
               width: percent === null ? "30%" : `${percent}%`,
-              backgroundColor: colorScheme.primary,
+              backgroundColor: colors.primary,
             },
           ]}
         />
@@ -502,24 +502,24 @@ function DownloadProgress({ download }: { download: ActiveDownload | null }) {
               marginTop: insets.top + 8,
               marginRight: 12,
               width: Math.min(220, width - 24),
-              backgroundColor: colorScheme.surface,
-              borderColor: colorScheme.border,
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
             },
           ]}
         >
           <Text
             numberOfLines={1}
-            style={[styles.label, { color: colorScheme.textPrimary }]}
+            style={[styles.label, { color: colors.textPrimary }]}
           >
             {download.waiting
               ? "Reconnecting…"
               : `Downloading ${download.label}`}
           </Text>
           {download.waiting || percent === null ? (
-            <ActivityIndicator color={colorScheme.primary} size="small" />
+            <ActivityIndicator color={colors.primary} size="small" />
           ) : (
             <Text
-              style={[styles.percent, { color: colorScheme.textSecondary }]}
+              style={[styles.percent, { color: colors.textSecondary }]}
             >
               {percent}%
             </Text>

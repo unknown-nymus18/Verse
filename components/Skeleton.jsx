@@ -4,11 +4,10 @@ import { Animated, StyleSheet, View } from "react-native";
 import { useThemeProvider } from "./ThemeProvider";
 
 export default function Skeleton({ width, height, borderRadius = 8, style }) {
-  const { isDark } = useThemeProvider();
+  const { colors } = useThemeProvider();
   const [animatedValue] = useState(() => new Animated.Value(0));
 
-  const baseColor = isDark ? "#18181b" : "#e5e5e5";
-  const highlightColor = isDark ? "#27272a" : "#f4f4f5";
+  const { baseColor, highlightColor } = colors;
 
   useEffect(() => {
     const shimmerAnimation = Animated.loop(

@@ -35,12 +35,8 @@ export default function EpisodeCard({
   seasonNumber,
   // onPress,
 }: Props) {
-  const { isDark } = useThemeProvider();
-
-  const textColor = isDark ? "#ffffff" : "#111111";
-  const metaColor = isDark ? "#a1a1aa" : "#8b8d94";
-  const cardBg = isDark ? "#18181b" : "#f1f1f3";
-  const imageBg = isDark ? "#27272a" : "#e5e5e5";
+  const { colors } = useThemeProvider();
+  const { textColor, metaColor, cardBg, imageBg } = colors;
 
   const stillUrl = episode.still_path
     ? `${IMAGE_BASE_URL}/w300${episode.still_path}`

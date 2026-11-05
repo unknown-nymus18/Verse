@@ -63,12 +63,13 @@ export function ThemeProvider({ children }) {
     [isDataSaver, setDataSaverValue],
   );
 
-  const colorScheme = isDark ? Colors.dark : Colors.light;
+  const colors = isDark ? Colors.dark : Colors.light;
 
   // Hooks must run before any early return
   const value = useMemo(
     () => ({
-      colorScheme,
+      colors,
+      colorScheme: colors,
       toggleTheme,
       isDark,
       setDark,
@@ -77,7 +78,7 @@ export function ThemeProvider({ children }) {
       onToggleDataSaver,
     }),
     [
-      colorScheme,
+      colors,
       toggleTheme,
       isDark,
       setDark,
@@ -102,3 +103,5 @@ export function useThemeProvider() {
   }
   return context;
 }
+
+export const useTheme = useThemeProvider;

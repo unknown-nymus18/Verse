@@ -122,7 +122,17 @@ function imageUrl(path: string | null | undefined, size: string) {
 
 export default function TvDetails() {
   const { id }: { id: string } = useLocalSearchParams();
-  const { isDark } = useThemeProvider();
+  const { colors, isDark } = useThemeProvider();
+  const {
+    bgColor,
+    primaryText,
+    secondaryText,
+    subText,
+    cardBg,
+    imagePlaceholder,
+    listBtnBg,
+    listBtnBorder,
+  } = colors;
 
   const [seriesData, setSeriesData] = useState<TVProps>();
   const [isLoading, setLoading] = useState<boolean>(true);
@@ -131,17 +141,6 @@ export default function TvDetails() {
   const [seasonsData, setSeasonsData] = useState<SeasonsMap>({});
   const [isLoadingSeasons, setIsLoadingSeasons] = useState(false);
   const [isSaved, setSaved] = useState<boolean>(false);
-
-  const bgColor = isDark ? "#08090b" : "#ffffff";
-  const primaryText = isDark ? "#ffffff" : "#17181c";
-  const secondaryText = isDark ? "#a1a1aa" : "#54565c";
-  const subText = isDark ? "#71717a" : "#8b8d94";
-  const cardBg = isDark ? "#18181b" : "#f1f1f3";
-  const imagePlaceholder = isDark ? "#27272a" : "#e5e5e5";
-  const listBtnBg = isDark ? "#18181b" : "#ffffff";
-  const listBtnBorder = isDark ? "#27272a" : "#e1e2e5";
-  const playBtnBg = isDark ? "#ffffff" : "#08090b";
-  const playBtnText = isDark ? "#08090b" : "#ffffff";
 
   async function getAllSeasonsData(seasons: Season[]) {
     try {
@@ -255,15 +254,7 @@ export default function TvDetails() {
       >
         <LinearGradient
           pointerEvents="none"
-          colors={
-            isDark
-              ? ["rgba(8, 9, 11, 0)", "rgba(8, 9, 11, 0.65)", "#08090b"]
-              : [
-                  "rgba(255, 255, 255, 0)",
-                  "rgba(255, 255, 255, 0.35)",
-                  "#ffffff",
-                ]
-          }
+          colors={colors.fadeGradient}
           locations={[0, 0.55, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}

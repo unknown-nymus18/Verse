@@ -42,16 +42,16 @@ const TABS_BY_NAME = Object.fromEntries(TABS.map((tab) => [tab.name, tab]));
 
 function AppTabBar(props) {
   const { state, navigation } = props;
-  const { isDark } = useThemeProvider();
+  const { colors } = useThemeProvider();
   const router = useRouter();
 
-  const bgColor = isDark ? "#08090b" : "#ffffff";
-  const activeColor = isDark ? "#ffffff" : "#000000";
-  const inactiveColor = isDark ? "#71717a" : "#92929b";
-  const blurTint = isDark ? "prominent" : "light";
-  const borderColor = isDark
-    ? "rgba(255, 255, 255, 0.1)"
-    : "rgba(0, 0, 0, 0.08)";
+  const {
+    bgColor,
+    activeColor,
+    inactiveColor,
+    blurTint,
+    tabBarBorder: borderColor,
+  } = colors;
 
   function handlePress(route, tab, isFocused) {
     if (navigation?.emit && navigation?.navigate) {

@@ -5,8 +5,8 @@ import { useThemeProvider } from "./ThemeProvider";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function HomeScreenSkeleton() {
-  const { isDark } = useThemeProvider();
-  const bgColor = isDark ? "#08090b" : "#ffffff";
+  const { colors } = useThemeProvider();
+  const { bgColor } = colors;
 
   return (
     <ScrollView

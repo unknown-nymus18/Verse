@@ -20,18 +20,13 @@ import {
 } from "../../services/ApiServices";
 
 export default function SettingsScreen() {
-  const { isDark, colorScheme, toggleTheme, isDataSaver, onToggleDataSaver } =
+  const { isDark, colors, toggleTheme, isDataSaver, onToggleDataSaver } =
     useThemeProvider();
+  const { textColor, mutedColor, cardBg, borderColor, accent, bgColor } =
+    colors;
   const [subtitle, setSubtitle] = useState(DEFAULT_SUBTITLE);
   const [showIosPicker, setShowIosPicker] = useState(false);
   const [dataSaver, setDataSaver] = useState(false);
-
-  const textColor = isDark ? "#ffffff" : "#111111";
-  const mutedColor = isDark ? "#a1a1aa" : "#8b8d94";
-  const cardBg = isDark ? "#18181b" : "#f1f1f3";
-  const borderColor = isDark ? "#27272a" : "#e1e2e5";
-  const accent = isDark ? "#ffffff" : "#08090b";
-  const bgColor = isDark ? "#08090b" : "#ffffff";
 
   const selectedLabel =
     SUBTITLE_OPTIONS.find((o) => o.value === subtitle)?.label ?? "English";

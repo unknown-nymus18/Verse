@@ -36,7 +36,18 @@ function formatSize(bytes) {
 }
 
 export default function LibraryScreen() {
-  const { isDark } = useThemeProvider();
+  const { colors } = useThemeProvider();
+  const {
+    bgColor,
+    dialogBg,
+    primaryTextColor,
+    primaryText,
+    subTextColor,
+    dialogBorder,
+    cancelBg,
+    placeholderBg,
+    playBtnText,
+  } = colors;
   const router = useRouter();
   const { downloadsVersion } = useDownloadManager();
 
@@ -45,14 +56,6 @@ export default function LibraryScreen() {
   const [downloads, setDownloads] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [itemToRemove, setItemToRemove] = useState(null);
-
-  const bgColor = isDark ? "#08090b" : "#ffffff";
-  const dialogBg = isDark ? "#18181b" : "#ffffff";
-  const primaryTextColor = isDark ? "#ffffff" : "#17181c";
-  const subTextColor = isDark ? "#a1a1aa" : "#8b8d94";
-  const dialogBorder = isDark ? "#3f3f46" : "#e4e4e7";
-  const cancelBg = isDark ? "#27272a" : "#f1f1f3";
-  const placeholderBg = isDark ? "#18181b" : "#ececef";
 
   async function loadSavedItems() {
     try {
@@ -220,16 +223,11 @@ export default function LibraryScreen() {
               style={[
                 styles.tab,
                 {
-                  backgroundColor: active ? primaryTextColor : cancelBg,
+                  backgroundColor: !active ? primaryTextColor : cancelBg,
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  { color: active ? bgColor : primaryTextColor },
-                ]}
-              >
+              <Text style={[styles.tabText, { color: primaryText }]}>
                 {label}
               </Text>
             </Pressable>

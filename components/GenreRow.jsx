@@ -4,9 +4,8 @@ import MovieCard from "./Moviecard";
 import { useThemeProvider } from "./ThemeProvider";
 
 function GenreRow({ genreName = "Top-10", movies }) {
-  const { isDark } = useThemeProvider();
-
-  const textColor = isDark ? "#ffffff" : "#17181c";
+  const { colors } = useThemeProvider();
+  const { textColor } = colors;
 
   return (
     <View style={styles.genreSection}>

@@ -40,12 +40,10 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GENRE_ENTRIES = Object.entries(GENRES);
 
 export default function HomeScreen() {
-  const { isDark } = useThemeProvider();
+  const { colors } = useThemeProvider();
   const { top } = useSafeAreaInsets();
 
-  const bgColor = isDark ? "#08090b" : "#ffffff";
-  const textColor = isDark ? "#ffffff" : "#08090b";
-  const posterBg = isDark ? "#18181b" : "#e5e5e5";
+  const { bgColor, textColor, posterBg, fadeGradient, dotInactive } = colors;
 
   const [movies, setMovies] = useState([]);
   const [moviesByGenre, setMoviesByGenre] = useState({});
@@ -230,19 +228,7 @@ export default function HomeScreen() {
                       />
                       <LinearGradient
                         pointerEvents="none"
-                        colors={
-                          isDark
-                            ? [
-                                "rgba(8, 9, 11, 0)",
-                                "rgba(8, 9, 11, 0.65)",
-                                "#08090b",
-                              ]
-                            : [
-                                "rgba(255, 255, 255, 0)",
-                                "rgba(255, 255, 255, 0.35)",
-                                "#ffffff",
-                              ]
-                        }
+                        colors={fadeGradient}
                         locations={[0, 0.55, 1]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 0, y: 1 }}
@@ -265,9 +251,7 @@ export default function HomeScreen() {
                       : [
                           styles.inactiveDot,
                           {
-                            backgroundColor: isDark
-                              ? "rgba(255,255,255,0.3)"
-                              : "rgba(0,0,0,0.2)",
+                            backgroundColor: dotInactive,
                           },
                         ],
                   ]}

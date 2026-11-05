@@ -63,13 +63,9 @@ export default function MovieCard({
   const pathRoute: "/details" | "/tvdetails" =
     mediaType === "movie" ? "/details" : "/tvdetails";
 
-  const { isDark, isDataSaver } = useThemeProvider();
-
-  const textColor = isDark ? "#ffffff" : "#111111";
-  const ratingColor = isDark ? "#d4d4d8" : "#222222";
-  const detailColor = isDark ? "#a1a1aa" : "#777777";
-  const posterBg = isDark ? "#18181b" : "#e5e5e5";
-  const placeholderBg = isDark ? "#27272a" : "#d4d4d8";
+  const { colors, isDataSaver } = useThemeProvider();
+  const { textColor, ratingColor, detailColor, posterBg, placeholderBg } =
+    colors;
 
   const imageRes = isDataSaver ? "w154" : "w185";
 

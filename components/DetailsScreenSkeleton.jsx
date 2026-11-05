@@ -7,8 +7,8 @@ const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 const HERO_HEIGHT = SCREEN_HEIGHT * 0.4;
 
 export default function DetailsScreenSkeleton({ isTv = false }) {
-  const { isDark } = useThemeProvider();
-  const bgColor = isDark ? "#08090b" : "#ffffff";
+  const { colors } = useThemeProvider();
+  const { bgColor } = colors;
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>

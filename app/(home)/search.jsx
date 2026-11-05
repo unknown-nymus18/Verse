@@ -26,15 +26,16 @@ import {
 
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
-  const { isDark } = useThemeProvider();
-
-  // Dynamic Theme Colors
-  const bgColor = isDark ? "#08090b" : "#ffffff";
-  const textColor = isDark ? "#ffffff" : "#17181c";
-  const subTextColor = isDark ? "#a1a1aa" : "#8b8d94";
-  const inputBg = isDark ? "#18181b" : "#f1f1f3";
-  const inputBorder = isDark ? "#27272a" : "transparent";
-  const blurTint = !isDark ? "dark" : "light";
+  const { colors, isDark } = useThemeProvider();
+  const {
+    bgColor,
+    textColor,
+    subTextColor,
+    inputBorder,
+    searchBlurTint: blurTint,
+    scrollTopBorder,
+    scrollTopBg,
+  } = colors;
 
   const [query, setQuery] = useState("");
   const [allMovies, setAllMovies] = useState([]);
@@ -249,7 +250,7 @@ export default function SearchScreen() {
             style={({ pressed }) => [
               styles.scrollTopButton,
               {
-                borderColor: isDark ? "#3f3f46" : "rgba(23, 24, 28, 0.14)",
+                borderColor: scrollTopBorder,
                 opacity: pressed ? 0.75 : 1,
                 transform: [{ scale: pressed ? 0.94 : 1 }],
               },
@@ -259,9 +260,7 @@ export default function SearchScreen() {
               style={[
                 styles.scrollTopBlur,
                 {
-                  backgroundColor: isDark
-                    ? "rgba(24, 24, 27, 0.92)"
-                    : "rgba(255, 255, 255, 0.92)",
+                  backgroundColor: scrollTopBg,
                 },
               ]}
             >
