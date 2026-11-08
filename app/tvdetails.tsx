@@ -8,24 +8,31 @@ import {
   isItemSaved,
   toggleSavedItem,
 } from "@/services/ApiServices";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Picker } from "@react-native-picker/picker";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Image,
   ImageBackground,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import YoutubePlayer from "react-native-youtube-iframe";
 
 interface Genre {
   id: number;
@@ -95,6 +102,24 @@ interface Season {
   vote_average: number;
 }
 
+interface Video {
+  id: string;
+  key: string;
+  site: string;
+  official: boolean;
+  type: string;
+}
+
+const TYPE_RANK: Record<string, number> = { Trailer: 0, Teaser: 2, Clip: 4 };
+
+function pickTrailerKey(videos: Video[] = []): string | undefined {
+  const rank = (v: Video) => (TYPE_RANK[v.type] ?? 6) + (v.official ? 0 : 1);
+
+  return videos
+    .filter((v) => v.site === "YouTube")
+    .sort((a, b) => rank(a) - rank(b))[0]?.key;
+}
+
 interface TVProps {
   id: number;
   adult: string;
@@ -111,6 +136,7 @@ interface TVProps {
   tagline: string;
   credits?: { cast: CastMember[] };
   recommendations?: { results: RecommendationItem[] };
+  videos?: { results: Video[] };
   last_air_date: string;
   runtime?: number;
 }
@@ -141,6 +167,38 @@ export default function TvDetails() {
   const [seasonsData, setSeasonsData] = useState<SeasonsMap>({});
   const [isLoadingSeasons, setIsLoadingSeasons] = useState(false);
   const [isSaved, setSaved] = useState<boolean>(false);
+  const [isPlaying, setPlaying] = useState(false);
+
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const playerHeight = Math.round((width * 9) / 16);
+
+  // Opening another series from "Recommended" must not keep the old trailer going
+  useEffect(() => {
+    setPlaying(false);
+  }, [id]);
+
+  // Stop the trailer when this screen loses focus (navigating to /play, etc.)
+  useFocusEffect(
+    useCallback(() => {
+      return () => setPlaying(false);
+    }, []),
+  );
+
+  const onStateChange = useCallback((state: string) => {
+    if (state === "ended") {
+      setPlaying(false);
+    }
+  }, []);
+
+  const startTrailer = useCallback(() => {
+    Haptics.selectionAsync();
+    setPlaying(true);
+  }, []);
+
+  const closeTrailer = useCallback(() => {
+    setPlaying(false);
+  }, []);
 
   async function getAllSeasonsData(seasons: Season[]) {
     try {
@@ -234,6 +292,7 @@ export default function TvDetails() {
   const cast = seriesData.credits?.cast ?? [];
   const recommendations = seriesData.recommendations?.results ?? [];
   const backdropUrl = imageUrl(seriesData.backdrop_path, "w780");
+  const videoId = pickTrailerKey(seriesData.videos?.results);
   const currentSeasonEpisodes = seasonsData[season]?.episodes ?? [];
 
   const seasonGuestStars = Array.from(
@@ -246,49 +305,99 @@ export default function TvDetails() {
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
-      <ImageBackground
-        style={[styles.poster, { backgroundColor: imagePlaceholder }]}
-        imageStyle={styles.posterImage}
-        resizeMode="cover"
-        source={backdropUrl ? { uri: backdropUrl } : undefined}
-      >
-        <LinearGradient
-          pointerEvents="none"
-          colors={colors.fadeGradient}
-          locations={[0, 0.55, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.fade}
-        />
-        <View style={styles.content}>
-          <SafeAreaView edges={["top"]} style={styles.topSafeArea}>
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={22} color="#fff" />
-            </Pressable>
-          </SafeAreaView>
-          <View style={styles.actions}>
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                toggleSave();
-              }}
-              style={[
-                styles.button,
-                {
-                  backgroundColor: isSaved ? "green" : listBtnBg,
-                  borderColor: listBtnBorder,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <Ionicons name="bookmark-outline" size={17} color={primaryText} />
-              <Text style={[styles.listText, { color: primaryText }]}>
-                {isSaved ? "Saved" : "Add to List"}
-              </Text>
-            </Pressable>
+      {!isPlaying || !videoId ? (
+        <ImageBackground
+          style={[styles.poster, { backgroundColor: imagePlaceholder }]}
+          imageStyle={styles.posterImage}
+          resizeMode="cover"
+          source={backdropUrl ? { uri: backdropUrl } : undefined}
+        >
+          <LinearGradient
+            pointerEvents="none"
+            colors={colors.fadeGradient}
+            locations={[0, 0.55, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.fade}
+          />
+          <View style={styles.content}>
+            <SafeAreaView edges={["top"]} style={styles.topSafeArea}>
+              <Pressable
+                onPress={() => router.back()}
+                style={styles.backButton}
+              >
+                <Ionicons name="arrow-back" size={22} color="#fff" />
+              </Pressable>
+            </SafeAreaView>
+
+            {!!videoId && (
+              <View style={styles.trailerOverlay}>
+                <Pressable
+                  onPress={startTrailer}
+                  accessibilityRole="button"
+                  accessibilityLabel="Play trailer"
+                  hitSlop={16}
+                >
+                  <FontAwesome5 name="play" size={30} color="white" />
+                </Pressable>
+              </View>
+            )}
+
+            <View style={styles.actions}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  toggleSave();
+                }}
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: isSaved ? "green" : listBtnBg,
+                    borderColor: listBtnBorder,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="bookmark-outline"
+                  size={17}
+                  color={primaryText}
+                />
+                <Text style={[styles.listText, { color: primaryText }]}>
+                  {isSaved ? "Saved" : "Add to List"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
+        </ImageBackground>
+      ) : (
+        <View style={[styles.poster, styles.playerBox]}>
+          <YoutubePlayer
+            width={width}
+            height={playerHeight}
+            play={isPlaying}
+            videoId={videoId}
+            onChangeState={onStateChange}
+            onError={() => {
+              setPlaying(false);
+              Linking.openURL(`https://www.youtube.com/watch?v=${videoId}`);
+            }}
+            initialPlayerParams={{ rel: false, modestbranding: true }}
+          />
+          <Pressable
+            onPress={closeTrailer}
+            style={[
+              styles.backButton,
+              styles.closeButton,
+              { top: insets.top + 4 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Close trailer"
+          >
+            <Ionicons name="close" size={22} color="#fff" />
+          </Pressable>
         </View>
-      </ImageBackground>
+      )}
       <SafeAreaView edges={["bottom"]} style={styles.bottomSafeArea}>
         <ScrollView
           style={styles.body}
@@ -577,6 +686,14 @@ const styles = StyleSheet.create({
     height: "100%",
     width: "100%",
   },
+  playerBox: {
+    backgroundColor: "#000",
+    justifyContent: "center",
+  },
+  closeButton: {
+    position: "absolute",
+    left: 14,
+  },
   fade: {
     position: "absolute",
     right: 0,
@@ -593,6 +710,14 @@ const styles = StyleSheet.create({
   },
   topSafeArea: {
     width: "100%",
+  },
+  trailerOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingBottom: 22,
+    zIndex: 100,
   },
   backButton: {
     width: 40,

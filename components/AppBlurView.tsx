@@ -1,6 +1,6 @@
 import { useThemeProvider } from "@/components/ThemeProvider";
 import { BlurTint, BlurView, BlurViewProps } from "expo-blur";
-import React, { forwardRef, PropsWithChildren } from "react";
+import { forwardRef, PropsWithChildren } from "react";
 import { Platform, StyleSheet, View, ViewProps, ViewStyle } from "react-native";
 
 export interface AppBlurViewProps extends PropsWithChildren<ViewProps> {
@@ -14,9 +14,6 @@ export interface AppBlurViewProps extends PropsWithChildren<ViewProps> {
   style?: ViewStyle | ViewStyle[];
 }
 
-/**
- * Converts a hex or rgb color string to rgba with a specified alpha.
- */
 function hexToRgba(color: string, alpha: number): string {
   if (!color) return `rgba(0, 0, 0, ${alpha})`;
   if (color.startsWith("rgba")) {
@@ -41,15 +38,6 @@ function hexToRgba(color: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/**
- * AppBlurView:
- * A unified cross-platform blur container.
- *
- * Solves:
- * - Android "milky white" wash by layering an adaptive theme overlay over the native blur.
- * - Inconsistent tinting between iOS, Android, and Web.
- * - Automatically falls back to a clean frosted backdrop on Android when no blurTarget is attached.
- */
 const AppBlurView = forwardRef<View, AppBlurViewProps>(function AppBlurView(
   {
     children,
@@ -68,22 +56,19 @@ const AppBlurView = forwardRef<View, AppBlurViewProps>(function AppBlurView(
   const { colors, isDark } = useThemeProvider();
   const themeBg = colors.bgColor || (isDark ? "#08090b" : "#ffffff");
 
-  // Determine active tint
   const activeTint: BlurTint = tint || (isDark ? "dark" : "light");
 
-  // Default overlay alpha balances legibility while letting blurred content show through
   const defaultAlpha = isDark
     ? Platform.OS === "android"
       ? 0.65
       : 0.52
     : Platform.OS === "android"
-      ? 0.60
+      ? 0.6
       : 0.48;
 
   const alpha = overlayAlpha !== undefined ? overlayAlpha : defaultAlpha;
   const computedOverlayColor = overlayColor || hexToRgba(themeBg, alpha);
 
-  // Flatten style to extract border radii for the overlay
   const flatStyle = (StyleSheet.flatten(style) || {}) as ViewStyle;
   const borderRadiusStyle = {
     borderRadius: flatStyle.borderRadius,
@@ -93,8 +78,6 @@ const AppBlurView = forwardRef<View, AppBlurViewProps>(function AppBlurView(
     borderBottomRightRadius: flatStyle.borderBottomRightRadius,
   };
 
-  // On Android, use dimezisBlurView only if a blurTarget is explicitly provided;
-  // otherwise fallback to 'none' to avoid Expo warnings, backed by the theme overlay.
   const resolvedBlurMethod =
     blurMethod ||
     (Platform.OS === "android"
@@ -114,7 +97,6 @@ const AppBlurView = forwardRef<View, AppBlurViewProps>(function AppBlurView(
       style={[styles.container, style as any]}
       {...rest}
     >
-      {/* Theme tint overlay: cancels out native white bleed and aligns tint to theme */}
       <View
         pointerEvents="none"
         style={[
