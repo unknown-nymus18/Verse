@@ -55,7 +55,6 @@ export default function SearchScreen() {
   const [isAtTop, setAtTop] = useState(true);
   const flatListRef = useRef(null);
 
-  // Header = status-bar inset + paddingTop(8) + input(44) + paddingBottom(10)
   const HEADER_HEIGHT = insets.top + 62;
 
   const FILTEROPTIONS = ["All", "Movies"];
@@ -196,7 +195,6 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
-      {/* ── Blur Header ───────────────────────────────────────────────── */}
       <BlurView
         tint={blurTint}
         blurReductionFactor={0}
@@ -204,8 +202,7 @@ export default function SearchScreen() {
           styles.header,
           {
             paddingTop: insets.top,
-            // Android fallback: BlurView renders weakly, so back it with a
-            // semi-transparent version of the page bg colour.
+
             backgroundColor: isDark
               ? "rgba(8, 9, 11, 0.56)"
               : "rgba(255, 255, 255, 0.56)",
@@ -229,16 +226,7 @@ export default function SearchScreen() {
             returnKeyType="search"
             clearButtonMode="always"
           />
-          {/* Filter icon — currently unused */}
-          {/* <View style={{ justifyContent: "center", alignItems: "center" }}>
-            <Ionicons
-              name="filter"
-              size={24}
-              color={isDark ? "white" : "black"}
-              style={{ margin: 5 }}
-              onPress={() => console.log("pressed")}
-            />
-          </View> */}
+
           {!isAtTop && (
             <Pressable
               accessibilityRole="button"
@@ -279,7 +267,7 @@ export default function SearchScreen() {
               <RefreshControl
                 refreshing={istrendindRefresing}
                 onRefresh={onTrendingRefresh}
-                progressViewOffset={HEADER_HEIGHT} // Android only
+                progressViewOffset={HEADER_HEIGHT}
               />
             }
             contentInsetAdjustmentBehavior="never"
@@ -295,20 +283,6 @@ export default function SearchScreen() {
               styles.list,
               Platform.OS === "android" && { paddingTop: HEADER_HEIGHT },
             ]}
-            // onScroll={handleScroll(loadMoreTrending)}
-            // ref={flatListRef}
-            // data={allMovies}
-            // refreshControl={
-            //   <RefreshControl
-            //     refreshing={istrendindRefresing}
-            //     onRefresh={onTrendingRefresh}
-            //     progressViewOffset={HEADER_HEIGHT}
-            //     style={{ zIndex: 1000 }}
-
-            //   ></RefreshControl>
-            // }
-            // keyExtractor={(item, index) => `${item.id}-${index}`}
-            // contentContainerStyle={[styles.list, { paddingTop: HEADER_HEIGHT }]}
             numColumns={3}
             columnWrapperStyle={styles.row}
             showsVerticalScrollIndicator={false}
@@ -490,7 +464,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  /** Full-width blur header bar */
+
   header: {
     position: "absolute",
     top: 0,
@@ -498,11 +472,11 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 100,
     overflow: "hidden",
-    // hairline bottom border for visual separation
+
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(128,128,128,0.25)",
   },
-  /** Inner row: search input + optional scroll-to-top button */
+
   headerRow: {
     flexDirection: "row",
     alignItems: "center",

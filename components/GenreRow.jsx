@@ -9,15 +9,17 @@ function GenreRow({ genreName = "Top-10", movies }) {
 
   return (
     <View style={styles.genreSection}>
-      <Text style={[styles.genreTitle, { color: textColor }]}>{genreName}</Text>
+      {movies && (
+        <Text style={[styles.genreTitle, { color: textColor }]}>
+          {genreName}
+        </Text>
+      )}
       <FlatList
         horizontal
         data={movies}
         keyExtractor={(item) => String(item.id)}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.genreList}
-        // Virtualization tuning: only keep a small window of off-screen
-        // cards mounted, since each card renders an image.
         initialNumToRender={6}
         maxToRenderPerBatch={6}
         windowSize={5}
