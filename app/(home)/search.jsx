@@ -306,7 +306,8 @@ export default function SearchScreen() {
                     style={{
                       flex: 1,
                       flexDirection: "column",
-                      marginBottom: 20,
+                      marginBottom: 10,
+                      marginTop: 10,
                     }}
                   >
                     <View style={styles.topSearch}>

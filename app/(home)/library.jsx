@@ -254,6 +254,7 @@ export default function LibraryScreen() {
             data={showsData}
             numColumns={3}
             columnWrapperStyle={styles.row}
+            contentContainerStyle={{ paddingBottom: 130 }}
             renderItem={({ item }) => (
               <View style={styles.cardContainer}>
                 <MovieCard
