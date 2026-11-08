@@ -61,20 +61,6 @@ interface RecommendationItem {
   width?: number | `${number}%`;
 }
 
-// adult,
-// id,
-// title: movieTitle,
-// original_title: originalTitle,
-// name: tvName,
-// original_name: originalName,
-// poster_path: posterPath,
-// release_date: releaseDate,
-// first_air_date: firstAirDate,
-// media_type: mediaType,
-// vote_average: voteAverage,
-// width,
-// style,
-
 interface Episode {
   id: number;
   name: string;
@@ -168,6 +154,8 @@ export default function TvDetails() {
   const [isLoadingSeasons, setIsLoadingSeasons] = useState(false);
   const [isSaved, setSaved] = useState<boolean>(false);
   const [isPlaying, setPlaying] = useState(false);
+  const [showIcon, setShowIcon] = useState<boolean>(false);
+  const delay = 4000;
 
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -176,7 +164,12 @@ export default function TvDetails() {
   // Opening another series from "Recommended" must not keep the old trailer going
   useEffect(() => {
     setPlaying(false);
-  }, [id]);
+    const timer = setTimeout(() => {
+      setShowIcon(true);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [id, delay]);
 
   // Stop the trailer when this screen loses focus (navigating to /play, etc.)
   useFocusEffect(
@@ -337,8 +330,24 @@ export default function TvDetails() {
                   accessibilityRole="button"
                   accessibilityLabel="Play trailer"
                   hitSlop={16}
+                  style={{
+                    display: showIcon ? "flex" : "none",
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    backgroundColor: "rgba(0, 0, 0, 0.55)",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: "rgba(255, 255, 255, 0.3)",
+                  }}
                 >
-                  <FontAwesome5 name="play" size={30} color="white" />
+                  <FontAwesome5
+                    name="play"
+                    size={24}
+                    color="#FFFFFF"
+                    style={{ marginLeft: 2 }}
+                  />
                 </Pressable>
               </View>
             )}

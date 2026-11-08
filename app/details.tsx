@@ -122,6 +122,8 @@ export default function DetailsScreen() {
   const [movie, setMovie] = useState<MovieDetails | null>(null);
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showIcon, setShowIcon] = useState<boolean>(false);
+  const delay = 4000;
 
   const playerHeight = Math.round((width * 9) / 16);
 
@@ -153,7 +155,13 @@ export default function DetailsScreen() {
     if (id) {
       getMovieData();
     }
-  }, [id]);
+
+    const timer = setTimeout(() => {
+      setShowIcon(true);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [id, delay]);
 
   // Opening another movie from "Recommended" must not keep the old trailer going
   useEffect(() => {
@@ -249,8 +257,25 @@ export default function DetailsScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Play trailer"
                   hitSlop={16}
+                  style={{
+                    display: showIcon ? "flex" : "none",
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    backgroundColor: "rgba(0, 0, 0, 0.55)", // Dark semi-transparent background
+                    justifyContent: "center",
+                    alignItems: "center",
+
+                    borderWidth: 1,
+                    borderColor: "rgba(255, 255, 255, 0.3)",
+                  }}
                 >
-                  <FontAwesome5 name="play" size={30} color="white" />
+                  <FontAwesome5
+                    name="play"
+                    size={24}
+                    color="#FFFFFF"
+                    style={{ marginLeft: 2 }}
+                  />
                 </Pressable>
               </View>
             )}
