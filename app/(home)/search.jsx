@@ -1,10 +1,11 @@
+import AppBlurView from "@/components/AppBlurView";
 import MovieCard from "@/components/Moviecard";
 import SearchScreenSkeleton from "@/components/SearchScreenSkeleton";
 import { useThemeProvider } from "@/components/ThemeProvider";
 import { getAllMovies, searchMovies } from "@/services/ApiServices";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-import { BlurView } from "expo-blur";
+import { BlurTargetView } from "expo-blur";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -30,7 +31,7 @@ export default function SearchScreen() {
     textColor,
     subTextColor,
     inputBorder,
-    searchBlurTint: blurTint,
+    searchBlurTint,
     scrollTopBorder,
     scrollTopBg,
   } = colors;
@@ -54,8 +55,10 @@ export default function SearchScreen() {
 
   const [isAtTop, setAtTop] = useState(true);
   const flatListRef = useRef(null);
+  const blurTargetRef = useRef(null);
 
   const HEADER_HEIGHT = insets.top + 62;
+  const bottomPadding = Math.max(insets.bottom + 85, 120);
 
   const FILTEROPTIONS = ["All", "Movies"];
 
@@ -118,8 +121,6 @@ export default function SearchScreen() {
     }
   }
 
-  // Generalized scroll handler: pass in whichever load-more function
-  // matches the list currently being shown.
   function handleScroll(loadMoreFn) {
     return ({ nativeEvent }) => {
       const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
@@ -195,17 +196,233 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
-      <BlurView
-        tint={blurTint}
-        blurReductionFactor={0}
+      <BlurTargetView
+        ref={blurTargetRef}
+        style={[styles.container, { backgroundColor: bgColor }]}
+      >
+        {isLoading || isSearching ? (
+          <SearchScreenSkeleton
+            paddingTop={HEADER_HEIGHT}
+            showFeatured={query.trim().length > 0}
+          />
+        ) : query === "" ? (
+          <FlatList
+            onScroll={handleScroll(loadMoreTrending)}
+            ref={flatListRef}
+            data={allMovies}
+            refreshControl={
+              <RefreshControl
+                refreshing={istrendindRefresing}
+                onRefresh={onTrendingRefresh}
+                progressViewOffset={HEADER_HEIGHT}
+              />
+            }
+            contentInsetAdjustmentBehavior="never"
+            contentInset={
+              Platform.OS === "ios" ? { top: HEADER_HEIGHT } : undefined
+            }
+            contentOffset={
+              Platform.OS === "ios" ? { x: 0, y: -HEADER_HEIGHT } : undefined
+            }
+            scrollIndicatorInsets={{ top: HEADER_HEIGHT }}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: bottomPadding },
+              Platform.OS === "android" && { paddingTop: HEADER_HEIGHT },
+            ]}
+            numColumns={3}
+            columnWrapperStyle={styles.row}
+            showsVerticalScrollIndicator={false}
+            ListFooterComponent={() => {
+              if (isLoadingMoreTrending)
+                return <ActivityIndicator style={{ marginVertical: 16 }} />;
+              return null;
+            }}
+            renderItem={({ item, index }) => (
+              <MovieCard
+                key={`${index}`}
+                adult={item.adult}
+                backdrop_path={item.backdrop_path}
+                id={item.id}
+                title={item.title}
+                original_title={item.original_title}
+                name={item.name}
+                original_name={item.original_name}
+                overview={item.overview}
+                poster_path={item.poster_path}
+                media_type={item.media_type}
+                original_language={item.original_language}
+                genre_ids={item.genre_ids}
+                popularity={item.popularity}
+                release_date={item.release_date}
+                first_air_date={item.first_air_date}
+                softcore={item.softcore}
+                video={item.video}
+                vote_average={item.vote_average}
+                vote_count={item.vote_count}
+              />
+            )}
+            ListEmptyComponent={
+              !isSearching && query.trim().length > 0 ? (
+                <Text style={[styles.empty, { color: subTextColor }]}>
+                  No results for "{query}"
+                </Text>
+              ) : null
+            }
+          />
+        ) : (
+          <FlatList
+            onScroll={handleScroll(loadMoreResults)}
+            data={results.slice(1)}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={[
+              styles.list,
+              { paddingTop: HEADER_HEIGHT, paddingBottom: bottomPadding },
+            ]}
+            numColumns={3}
+            columnWrapperStyle={styles.row}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponentStyle={
+              results.length > 0 ? { height: 300, width: "100%" } : undefined
+            }
+            ListHeaderComponent={() => {
+              if (results.length > 0) {
+                const topSearch = results[0];
+                return (
+                  <TouchableOpacity
+                    onPress={() => {
+                      const media_type = results.at(0).media_type;
+
+                      router.push({
+                        pathname:
+                          media_type === "tv" ? "/tvdetails" : "/details",
+                        params: {
+                          id: results.at(0).id,
+                          type: results.at(0).media_type,
+                        },
+                      });
+                    }}
+                    style={{
+                      flex: 1,
+                      flexDirection: "column",
+                      marginBottom: 20,
+                    }}
+                  >
+                    <View style={styles.topSearch}>
+                      <ImageBackground
+                        source={{
+                          uri: `https://image.tmdb.org/t/p/w780${topSearch.poster_path}`,
+                        }}
+                        imageStyle={{
+                          height: "100%",
+                          width: "100%",
+                          resizeMode: "cover",
+                          borderRadius: 10,
+                        }}
+                        style={{ height: "100%", width: "100%", flex: 1 }}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          numberOfLines={2}
+                          style={{
+                            fontSize: 22,
+                            fontWeight: "bold",
+                            color: textColor,
+                          }}
+                        >
+                          {topSearch.title ||
+                            topSearch.original_title ||
+                            topSearch.name}
+                        </Text>
+                        <Text
+                          numberOfLines={5}
+                          style={{
+                            color: subTextColor,
+                            marginTop: 6,
+                            fontSize: 13,
+                          }}
+                        >
+                          {topSearch.overview}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.stats}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        {topSearch.vote_average > 0 && (
+                          <>
+                            <Ionicons name="star" size={13} color="#ffc400" />
+                            <Text
+                              style={{
+                                color: textColor,
+                                fontSize: 13,
+                                fontWeight: "600",
+                              }}
+                            >
+                              {topSearch.vote_average.toFixed(1)}
+                            </Text>
+                          </>
+                        )}
+                      </View>
+                      <Text style={{ color: subTextColor, fontSize: 13 }}>
+                        {topSearch.release_date || topSearch.first_air_date}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+              return <View />;
+            }}
+            renderItem={({ item }) => (
+              <MovieCard
+                key={item.id}
+                adult={item.adult}
+                backdrop_path={item.backdrop_path}
+                id={item.id}
+                title={item.title}
+                original_title={item.original_title}
+                name={item.name}
+                original_name={item.original_name}
+                poster_path={item.poster_path}
+                release_date={item.release_date}
+                first_air_date={item.first_air_date}
+                vote_average={item.vote_average}
+                vote_count={item.vote_count}
+                media_type={item.media_type}
+              />
+            )}
+            ListFooterComponent={() => {
+              if (isLoadingMoreResults)
+                return <ActivityIndicator style={{ marginVertical: 16 }} />;
+              return null;
+            }}
+            ListEmptyComponent={
+              !isSearching && query.trim().length > 0 ? (
+                <Text style={[styles.empty, { color: subTextColor }]}>
+                  No results for "{query}"
+                </Text>
+              ) : null
+            }
+          />
+        )}
+      </BlurTargetView>
+
+      <AppBlurView
+        blurTarget={blurTargetRef}
+        intensity={35}
         style={[
           styles.header,
           {
             paddingTop: insets.top,
-
-            backgroundColor: isDark
-              ? "rgba(8, 9, 11, 0.56)"
-              : "rgba(255, 255, 255, 0.56)",
+            borderBottomColor: isDark
+              ? "rgba(255, 255, 255, 0.08)"
+              : "rgba(0, 0, 0, 0.08)",
           },
         ]}
       >
@@ -250,212 +467,7 @@ export default function SearchScreen() {
             </Pressable>
           )}
         </View>
-      </BlurView>
-
-      {isLoading || isSearching ? (
-        <SearchScreenSkeleton
-          paddingTop={HEADER_HEIGHT}
-          showFeatured={query.trim().length > 0}
-        />
-      ) : query === "" ? (
-        <>
-          <FlatList
-            onScroll={handleScroll(loadMoreTrending)}
-            ref={flatListRef}
-            data={allMovies}
-            refreshControl={
-              <RefreshControl
-                refreshing={istrendindRefresing}
-                onRefresh={onTrendingRefresh}
-                progressViewOffset={HEADER_HEIGHT}
-              />
-            }
-            contentInsetAdjustmentBehavior="never"
-            contentInset={
-              Platform.OS === "ios" ? { top: HEADER_HEIGHT } : undefined
-            }
-            contentOffset={
-              Platform.OS === "ios" ? { x: 0, y: -HEADER_HEIGHT } : undefined
-            }
-            scrollIndicatorInsets={{ top: HEADER_HEIGHT }}
-            keyExtractor={(item, index) => `${item.id}-${index}`}
-            contentContainerStyle={[
-              styles.list,
-              Platform.OS === "android" && { paddingTop: HEADER_HEIGHT },
-            ]}
-            numColumns={3}
-            columnWrapperStyle={styles.row}
-            showsVerticalScrollIndicator={false}
-            ListFooterComponent={() => {
-              if (isLoadingMoreTrending)
-                return <ActivityIndicator style={{ marginVertical: 16 }} />;
-              return null;
-            }}
-            renderItem={({ item, index }) => (
-              <MovieCard
-                key={`${index}`}
-                adult={item.adult}
-                backdrop_path={item.backdrop_path}
-                id={item.id}
-                title={item.title}
-                original_title={item.original_title}
-                name={item.name}
-                original_name={item.original_name}
-                overview={item.overview}
-                poster_path={item.poster_path}
-                media_type={item.media_type}
-                original_language={item.original_language}
-                genre_ids={item.genre_ids}
-                popularity={item.popularity}
-                release_date={item.release_date}
-                first_air_date={item.first_air_date}
-                softcore={item.softcore}
-                video={item.video}
-                vote_average={item.vote_average}
-                vote_count={item.vote_count}
-              />
-            )}
-            ListEmptyComponent={
-              !isSearching && query.trim().length > 0 ? (
-                <Text style={[styles.empty, { color: subTextColor }]}>
-                  No results for "{query}"
-                </Text>
-              ) : null
-            }
-          ></FlatList>
-        </>
-      ) : (
-        <FlatList
-          onScroll={handleScroll(loadMoreResults)}
-          data={results.slice(1)}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={[styles.list, { paddingTop: HEADER_HEIGHT }]}
-          numColumns={3}
-          columnWrapperStyle={styles.row}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponentStyle={
-            results.length > 0 ? { height: 300, width: "100%" } : undefined
-          }
-          ListHeaderComponent={() => {
-            if (results.length > 0) {
-              const topSearch = results[0];
-              return (
-                <TouchableOpacity
-                  onPress={() => {
-                    const media_type = results.at(0).media_type;
-
-                    router.push({
-                      pathname: media_type === "tv" ? "/tvdetails" : "/details",
-                      params: {
-                        id: results.at(0).id,
-                        type: results.at(0).media_type,
-                      },
-                    });
-                  }}
-                  style={{ flex: 1, flexDirection: "column", marginBottom: 20 }}
-                >
-                  <View style={styles.topSearch}>
-                    <ImageBackground
-                      source={{
-                        uri: `https://image.tmdb.org/t/p/w780${topSearch.poster_path}`,
-                      }}
-                      imageStyle={{
-                        height: "100%",
-                        width: "100%",
-                        resizeMode: "cover",
-                        borderRadius: 10,
-                      }}
-                      style={{ height: "100%", width: "100%", flex: 1 }}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        numberOfLines={2}
-                        style={{
-                          fontSize: 22,
-                          fontWeight: "bold",
-                          color: textColor,
-                        }}
-                      >
-                        {topSearch.title ||
-                          topSearch.original_title ||
-                          topSearch.name}
-                      </Text>
-                      <Text
-                        numberOfLines={5}
-                        style={{
-                          color: subTextColor,
-                          marginTop: 6,
-                          fontSize: 13,
-                        }}
-                      >
-                        {topSearch.overview}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.stats}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      {topSearch.vote_average > 0 && (
-                        <>
-                          <Ionicons name="star" size={13} color="#ffc400" />
-                          <Text
-                            style={{
-                              color: textColor,
-                              fontSize: 13,
-                              fontWeight: "600",
-                            }}
-                          >
-                            {topSearch.vote_average.toFixed(1)}
-                          </Text>
-                        </>
-                      )}
-                    </View>
-                    <Text style={{ color: subTextColor, fontSize: 13 }}>
-                      {topSearch.release_date || topSearch.first_air_date}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            }
-            return <View />;
-          }}
-          renderItem={({ item }) => (
-            <MovieCard
-              key={item.id}
-              adult={item.adult}
-              backdrop_path={item.backdrop_path}
-              id={item.id}
-              title={item.title}
-              original_title={item.original_title}
-              name={item.name}
-              original_name={item.original_name}
-              poster_path={item.poster_path}
-              release_date={item.release_date}
-              first_air_date={item.first_air_date}
-              vote_average={item.vote_average}
-              vote_count={item.vote_count}
-              media_type={item.media_type}
-            />
-          )}
-          ListFooterComponent={() => {
-            if (isLoadingMoreResults)
-              return <ActivityIndicator style={{ marginVertical: 16 }} />;
-            return null;
-          }}
-          ListEmptyComponent={
-            !isSearching && query.trim().length > 0 ? (
-              <Text style={[styles.empty, { color: subTextColor }]}>
-                No results for "{query}"
-              </Text>
-            ) : null
-          }
-        />
-      )}
+      </AppBlurView>
     </View>
   );
 }
@@ -464,7 +476,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-
   header: {
     position: "absolute",
     top: 0,
@@ -472,11 +483,8 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 100,
     overflow: "hidden",
-
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(128,128,128,0.25)",
   },
-
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -518,7 +526,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   empty: { textAlign: "center", marginTop: 24 },
-  list: { paddingBottom: 110 },
+  list: { paddingBottom: 120 },
   topSearch: {
     height: "50%",
     flex: 1,

@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { differenceInCalendarDays } from "date-fns";
-import { BlurView } from "expo-blur";
+import AppBlurView from "./AppBlurView";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { router } from "expo-router";
@@ -154,17 +154,17 @@ export default function MovieCard({
           )}
 
           {adult && (
-            <BlurView
+            <AppBlurView
               style={{
                 height: "100%",
                 width: "100%",
                 justifyContent: "center",
                 alignItems: "center",
               }}
-              intensity={10}
+              intensity={20}
             >
               <Text style={{ color: textColor }}>Adult Content</Text>
-            </BlurView>
+            </AppBlurView>
           )}
         </View>
       ) : (

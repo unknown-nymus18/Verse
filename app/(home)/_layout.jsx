@@ -1,12 +1,19 @@
+import AppBlurView from "@/components/AppBlurView";
 import { useThemeProvider } from "@/components/ThemeProvider";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { BlurView } from "expo-blur";
+import { BlurTargetView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Tabs, useRouter } from "expo-router";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Single source of truth: `name` must match the file name inside this folder.
 const TABS = [
   {
     name: "index",
@@ -40,47 +47,61 @@ const TABS = [
 
 const TABS_BY_NAME = Object.fromEntries(TABS.map((tab) => [tab.name, tab]));
 
-function AppTabBar(props) {
-  const { state, navigation } = props;
+function TabBarBridge({ state, navigation, onChange }) {
+  const signature = `${state.index}:${state.routes.map((r) => r.key).join(",")}`;
+
+  useLayoutEffect(() => {
+    onChange({ state, navigation });
+  }, [signature]);
+
+  return null;
+}
+
+function AppTabBar({ state, navigation, blurTarget }) {
   const { colors } = useThemeProvider();
   const router = useRouter();
 
   const {
-    bgColor,
     activeColor,
     inactiveColor,
     blurTint,
     tabBarBorder: borderColor,
   } = colors;
 
-  function handlePress(route, tab, isFocused) {
+  const [pressedIndex, setPressedIndex] = useState(null);
+  const activeIndex = pressedIndex !== null ? pressedIndex : state.index;
+
+  useEffect(() => {
+    setPressedIndex(null);
+  }, [state.index]);
+
+  function handlePress(route, tab, isFocused, index) {
+    if (isFocused) return;
+
+    setPressedIndex(index);
+    Haptics.selectionAsync().catch(() => {});
+
     if (navigation?.emit && navigation?.navigate) {
-      // Let screens react to tab presses (scroll to top, reset a nested stack...)
       const event = navigation.emit({
         type: "tabPress",
         target: route.key,
         canPreventDefault: true,
       });
 
-      if (!isFocused && !event.defaultPrevented) {
-        Haptics.selectionAsync();
+      if (!event.defaultPrevented) {
         navigation.navigate(route.name, route.params);
       }
       return;
     }
 
-    // Fallback if the navigator doesn't pass `navigation` to the tab bar
-    if (!isFocused) {
-      Haptics.selectionAsync();
-      router.navigate(tab.path);
-    }
+    router.navigate(tab.path);
   }
 
   const items = state.routes.map((route, index) => {
     const tab = TABS_BY_NAME[route.name];
-    if (!tab) return null; // ignore routes that aren't real tabs
+    if (!tab) return null;
 
-    const isFocused = state.index === index;
+    const isFocused = activeIndex === index;
 
     return (
       <Pressable
@@ -88,7 +109,7 @@ function AppTabBar(props) {
         accessibilityRole="tab"
         accessibilityLabel={tab.label}
         accessibilityState={{ selected: isFocused }}
-        onPress={() => handlePress(route, tab, isFocused)}
+        onPress={() => handlePress(route, tab, isFocused, index)}
         onLongPress={() =>
           navigation?.emit?.({ type: "tabLongPress", target: route.key })
         }
@@ -108,55 +129,60 @@ function AppTabBar(props) {
     );
   });
 
-  if (Platform.OS === "ios") {
-    return (
-      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
-        <BlurView
-          tint={blurTint}
-          intensity={80}
-          style={[styles.tabBar, { borderColor }]}
-        >
-          {items}
-        </BlurView>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView edges={["bottom"]} style={{ backgroundColor: bgColor }}>
-      <View
-        style={[
-          styles.flatBar,
-          { backgroundColor: bgColor, borderTopColor: borderColor },
-        ]}
+    <SafeAreaView
+      edges={["bottom"]}
+      style={styles.safeArea}
+      pointerEvents="box-none"
+    >
+      <AppBlurView
+        blurTarget={blurTarget}
+        intensity={60}
+        style={[styles.tabBar, { borderColor }]}
       >
         {items}
-      </View>
+      </AppBlurView>
     </SafeAreaView>
   );
 }
 
 export default function HomeTabsLayout() {
+  const blurTargetRef = useRef(null);
+  const [barProps, setBarProps] = useState(null);
+
+  const renderTabBar = useCallback(
+    (props) => <TabBarBridge {...props} onChange={setBarProps} />,
+    [],
+  );
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        freezeOnBlur: true, // stop re-rendering tabs you're not looking at
-      }}
-      tabBar={(props) => <AppTabBar {...props} />}
-    >
-      {TABS.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{ title: tab.label }}
-        />
-      ))}
-    </Tabs>
+    <View style={styles.root}>
+      <BlurTargetView ref={blurTargetRef} style={styles.root}>
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            freezeOnBlur: false,
+            lazy: true,
+          }}
+          tabBar={renderTabBar}
+        >
+          {TABS.map((tab) => (
+            <Tabs.Screen
+              key={tab.name}
+              name={tab.name}
+              options={{ title: tab.label }}
+            />
+          ))}
+        </Tabs>
+      </BlurTargetView>
+
+      {barProps && <AppTabBar {...barProps} blurTarget={blurTargetRef} />}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   safeArea: { position: "absolute", left: 5, right: 5, bottom: 0 },
   tabBar: {
     height: 66,
@@ -176,11 +202,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     overflow: "hidden",
-  },
-  flatBar: {
-    padding: 10,
-    flexDirection: "row",
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
   tab: {
     flex: 1,

@@ -5,7 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -56,6 +56,7 @@ export default function LibraryScreen() {
   const [downloads, setDownloads] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [itemToRemove, setItemToRemove] = useState(null);
+  const hasLoadedOnce = useRef(false);
 
   async function loadSavedItems() {
     try {
@@ -131,10 +132,13 @@ export default function LibraryScreen() {
     }
   }
 
-  async function loadAllData() {
-    setIsLoading(true);
-    await Promise.all([loadSavedItems(), loadDownloadedItems()]);
-    setIsLoading(false);
+  async function loadAllData(showLoading = true) {
+    if (showLoading) setIsLoading(true);
+    try {
+      await Promise.all([loadSavedItems(), loadDownloadedItems()]);
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
   }
 
   async function removeFromLibrary(item) {
@@ -188,11 +192,12 @@ export default function LibraryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadAllData();
+      const showLoading = !hasLoadedOnce.current;
+      hasLoadedOnce.current = true;
+      loadAllData(showLoading);
     }, []),
   );
 
-  // Refreshes the Downloaded tab as soon as a download finishes
   useEffect(() => {
     if (downloadsVersion > 0) {
       loadDownloadedItems();
@@ -289,7 +294,7 @@ export default function LibraryScreen() {
         <Text
           style={{ color: subTextColor, textAlign: "center", marginTop: 40 }}
         >
-          No downloaded videos yet.
+          This feature has not been rolled out yet
         </Text>
       ) : (
         <FlatList

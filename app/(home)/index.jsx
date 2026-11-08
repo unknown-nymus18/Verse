@@ -40,8 +40,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const GENRE_ENTRIES = Object.entries(GENRES);
 
-// Each dot's width and color are driven by the carousel's scroll offset,
-// so the dots stretch live as you drag (or as the auto-advance slides).
 function PaginationDot({ index, scrollX, inactiveColor }) {
   const inputRange = [
     (index - 1) * SCREEN_WIDTH,
@@ -66,7 +64,7 @@ function PaginationDot({ index, scrollX, inactiveColor }) {
 
 export default function HomeScreen() {
   const { colors } = useThemeProvider();
-  const { top } = useSafeAreaInsets();
+  const { top, bottom } = useSafeAreaInsets();
 
   const { bgColor, textColor, posterBg, fadeGradient, dotInactive } = colors;
 
@@ -106,7 +104,6 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [topTen.length]);
 
-  // Keeps the auto-advance interval in sync after a manual swipe
   const onMomentumScrollEnd = (event) => {
     activeIndexRef.current = Math.round(
       event.nativeEvent.contentOffset.x / SCREEN_WIDTH,
@@ -195,7 +192,10 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
       <ScrollView
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[
+          styles.list,
+          { paddingBottom: Math.max(bottom + 85, 110) },
+        ]}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         refreshControl={
@@ -292,9 +292,9 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingBottom: 60 },
+  container: { flex: 1 },
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
-  list: { paddingBottom: 30 },
+  list: { paddingBottom: 110 },
   carouselContainer: {
     position: "relative",
     marginBottom: 20,
