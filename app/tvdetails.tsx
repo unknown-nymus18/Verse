@@ -630,24 +630,22 @@ export default function TvDetails() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={[styles.recs, { gap: 16 }]} // Adds spacing between horizontal items
                 renderItem={({ item }) => (
-                  <Pressable onPress={() => console.log("don't move")}>
-                    <MovieCard
-                      adult={item.adult}
-                      id={item.id}
-                      title={item.title}
-                      original_title={item.original_title}
-                      name={item.name}
-                      original_name={item.original_name}
-                      poster_path={item.poster_path}
-                      media_type={item.media_type}
-                      original_language={item.original_language}
-                      release_date={item.release_date}
-                      first_air_date={item.first_air_date}
-                      vote_average={item.vote_average}
-                      width={110}
-                      replace={true}
-                    />
-                  </Pressable>
+                  <MovieCard
+                    adult={item.adult}
+                    id={item.id}
+                    title={item.title}
+                    original_title={item.original_title}
+                    name={item.name}
+                    original_name={item.original_name}
+                    poster_path={item.poster_path}
+                    media_type={item.media_type}
+                    original_language={item.original_language}
+                    release_date={item.release_date}
+                    first_air_date={item.first_air_date}
+                    vote_average={item.vote_average}
+                    width={110}
+                    replace={true}
+                  />
                 )}
               />
             </>

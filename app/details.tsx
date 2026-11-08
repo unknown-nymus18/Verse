@@ -6,6 +6,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import YoutubePlayer from "react-native-youtube-iframe";
 
+import MovieCard from "@/components/Moviecard";
 import {
   FlatList,
   Image,
@@ -50,12 +51,19 @@ interface CastMember {
 }
 
 interface RecommendationItem {
+  adult?: boolean;
   id: number;
   title?: string;
+  original_title?: string;
   name?: string;
+  original_name?: string;
   poster_path: string | null;
-  vote_average?: number | null;
-  media_type?: "movie" | "tv" | null;
+  media_type: "movie" | "tv";
+  original_language?: string;
+  release_date?: string;
+  first_air_date?: string;
+  vote_average: number;
+  width?: number | `${number}%`;
 }
 
 interface Video {
@@ -163,12 +171,10 @@ export default function DetailsScreen() {
     return () => clearTimeout(timer);
   }, [id, delay]);
 
-  // Opening another movie from "Recommended" must not keep the old trailer going
   useEffect(() => {
     setPlaying(false);
   }, [id]);
 
-  // Stop the trailer when this screen loses focus (navigating to /play, etc.)
   useFocusEffect(
     useCallback(() => {
       return () => setPlaying(false);
@@ -473,48 +479,24 @@ export default function DetailsScreen() {
                 keyExtractor={(item) => String(item.id)}
                 contentContainerStyle={styles.horizontalList}
                 renderItem={({ item }) => {
-                  const recPosterUrl = imageUrl(item.poster_path, "w200");
+                  // const recPosterUrl = imageUrl(item.poster_path, "w200");
                   return (
-                    <Pressable
-                      style={styles.recCard}
-                      onPress={() => goToRecommendation(item)}
-                    >
-                      {recPosterUrl ? (
-                        <Image
-                          source={{ uri: recPosterUrl }}
-                          style={[
-                            styles.recPoster,
-                            { backgroundColor: imagePlaceholder },
-                          ]}
-                        />
-                      ) : (
-                        <View
-                          style={[
-                            styles.recPoster,
-                            { backgroundColor: imagePlaceholder },
-                          ]}
-                        />
-                      )}
-                      <View style={styles.recMeta}>
-                        {!!item.vote_average && (
-                          <>
-                            <Ionicons name="star" size={13} color="#ffc400" />
-                            <Text
-                              style={[styles.recTitle, { color: primaryText }]}
-                              numberOfLines={1}
-                            >
-                              {item.vote_average.toFixed(1)}
-                            </Text>
-                          </>
-                        )}
-                        <Text
-                          style={[styles.recTitle, { color: primaryText }]}
-                          numberOfLines={1}
-                        >
-                          {item.title || item.name}
-                        </Text>
-                      </View>
-                    </Pressable>
+                    <MovieCard
+                      adult={item.adult}
+                      id={item.id}
+                      title={item.title}
+                      original_title={item.original_title}
+                      name={item.name}
+                      original_name={item.original_name}
+                      poster_path={item.poster_path}
+                      media_type={item.media_type}
+                      original_language={item.original_language}
+                      release_date={item.release_date}
+                      first_air_date={item.first_air_date}
+                      vote_average={item.vote_average}
+                      width={110}
+                      replace={true}
+                    />
                   );
                 }}
               />
@@ -675,6 +657,7 @@ const styles = StyleSheet.create({
   },
   horizontalList: {
     paddingRight: 14,
+    gap: 16,
   },
   castCard: {
     width: 90,
