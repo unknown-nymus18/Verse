@@ -93,7 +93,8 @@ export default function SettingsScreen() {
           )}
         </View>
         <Text style={{ color: mutedColor, margin: 20 }}>
-          All content shown in this app not hosted by the creator of this app
+          All content shown in this app are not hosted by the creator of this
+          app
         </Text>
       </SafeAreaView>
 
