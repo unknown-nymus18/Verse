@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useThemeProvider } from "../../components/ThemeProvider";
 
 import {
+  Animated,
   Button,
   Dimensions,
   FlatList,
@@ -39,6 +40,30 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const GENRE_ENTRIES = Object.entries(GENRES);
 
+// Each dot's width and color are driven by the carousel's scroll offset,
+// so the dots stretch live as you drag (or as the auto-advance slides).
+function PaginationDot({ index, scrollX, inactiveColor }) {
+  const inputRange = [
+    (index - 1) * SCREEN_WIDTH,
+    index * SCREEN_WIDTH,
+    (index + 1) * SCREEN_WIDTH,
+  ];
+
+  const width = scrollX.interpolate({
+    inputRange,
+    outputRange: [8, 20, 8],
+    extrapolate: "clamp",
+  });
+
+  const backgroundColor = scrollX.interpolate({
+    inputRange,
+    outputRange: [inactiveColor, "#e50914", inactiveColor],
+    extrapolate: "clamp",
+  });
+
+  return <Animated.View style={[styles.dot, { width, backgroundColor }]} />;
+}
+
 export default function HomeScreen() {
   const { colors } = useThemeProvider();
   const { top } = useSafeAreaInsets();
@@ -50,17 +75,16 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const [activeIndex, setActiveIndex] = useState(0);
-
   const flatListRef = useRef(null);
   const activeIndexRef = useRef(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  const onCarouselScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    { useNativeDriver: false },
+  );
 
   const topTen = movies.slice(0, 10);
-
-  const updateActiveIndex = (index) => {
-    activeIndexRef.current = index;
-    setActiveIndex(index);
-  };
 
   useEffect(() => {
     if (!topTen || topTen.length === 0) return;
@@ -71,7 +95,7 @@ export default function HomeScreen() {
         nextIndex = 0;
       }
 
-      updateActiveIndex(nextIndex);
+      activeIndexRef.current = nextIndex;
 
       flatListRef.current?.scrollToIndex({
         index: nextIndex,
@@ -82,11 +106,11 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [topTen.length]);
 
+  // Keeps the auto-advance interval in sync after a manual swipe
   const onMomentumScrollEnd = (event) => {
-    const newIndex = Math.round(
+    activeIndexRef.current = Math.round(
       event.nativeEvent.contentOffset.x / SCREEN_WIDTH,
     );
-    updateActiveIndex(newIndex);
   };
 
   const getData = useCallback(async (isMountedRef) => {
@@ -191,6 +215,8 @@ export default function HomeScreen() {
               pagingEnabled={true}
               showsHorizontalScrollIndicator={false}
               decelerationRate="fast"
+              onScroll={onCarouselScroll}
+              scrollEventThrottle={16}
               onMomentumScrollEnd={onMomentumScrollEnd}
               onScrollToIndexFailed={(info) => {
                 flatListRef.current?.scrollToOffset({
@@ -242,19 +268,11 @@ export default function HomeScreen() {
 
             <View style={styles.paginationContainer}>
               {topTen.map((_, index) => (
-                <View
+                <PaginationDot
                   key={index}
-                  style={[
-                    styles.dot,
-                    index === activeIndex
-                      ? styles.activeDot
-                      : [
-                          styles.inactiveDot,
-                          {
-                            backgroundColor: dotInactive,
-                          },
-                        ],
-                  ]}
+                  index={index}
+                  scrollX={scrollX}
+                  inactiveColor={dotInactive}
                 />
               ))}
             </View>
@@ -274,7 +292,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingBottom: 60 },
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
   list: { paddingBottom: 30 },
   carouselContainer: {
@@ -306,12 +324,5 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginHorizontal: 4,
-  },
-  activeDot: {
-    width: 20,
-    backgroundColor: "#e50914",
-  },
-  inactiveDot: {
-    width: 8,
   },
 });
