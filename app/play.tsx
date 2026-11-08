@@ -1,11 +1,11 @@
 import { getSubtitlesStorage } from "@/services/ApiServices";
 import { useKeepAwake } from "expo-keep-awake";
 import { useLocalSearchParams, useNavigation } from "expo-router";
-import { useEffect, useState } from "react";
-import { StyleSheet } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { BackHandler, Linking, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
-import { useDownloadManager } from "../components/DownloadProvider";
+// import { useDownloadManager } from "../components/DownloadProvider";
 
 export default function VideoScreen() {
   useKeepAwake();
@@ -22,13 +22,28 @@ export default function VideoScreen() {
     episodeNumber?: string;
   }>();
   const navigation = useNavigation();
-  const { startDownload } = useDownloadManager();
+  // const { startDownload } = useDownloadManager();
 
   const [subtitle, setSubtitle] = useState<string | null>(null);
+  const webViewRef = useRef<any>(null);
+  const [canGoBack, setCanGoBack] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({ gestureEnabled: true });
   }, [navigation]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (canGoBack && webViewRef.current) {
+        webViewRef.current.goBack();
+        return true;
+      }
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => sub.remove();
+  }, [canGoBack]);
 
   useEffect(() => {
     (async () => {
@@ -44,25 +59,44 @@ export default function VideoScreen() {
   // Script injected before content loads to suppress popup redirects and click-jacking overlays
   const AD_BLOCK_SCRIPT = `
     (function() {
-      // 1. Block window.open popups entirely
-      window.open = function() { return null; };
+      // 1. Allow workers.dev in window.open, otherwise block unwanted ad popups
+      const originalWindowOpen = window.open;
+      window.open = function(url) {
+        if (url && typeof url === 'string' && (url.includes('workers.dev') || url.includes('.mkv'))) {
+          window.location.href = url;
+          return window;
+        }
+        return null;
+      };
 
-      // 2. Prevent click hijacking on elements attempting external redirects
+      // 2. Allow download links to navigate directly in the webview
       const originalClick = HTMLAnchorElement.prototype.click;
       HTMLAnchorElement.prototype.click = function() {
-        if (this.target === '_blank' || (this.href && !this.href.includes('vidstuck.xyz'))) {
+        if (this.href && (this.href.includes('workers.dev') || this.href.includes('.mkv') || this.hasAttribute('download'))) {
+          this.target = '_self';
+          return originalClick.apply(this, arguments);
+        }
+        if (this.target === '_blank' || (this.href && !this.href.includes('vidstuck.xyz') && !this.href.includes('vidstuck.cc'))) {
           return;
         }
         return originalClick.apply(this, arguments);
       };
 
-      // 3. MutationObserver to auto-remove transparent ad overlays & popups
+      // 3. Ensure any click on a download link targets _self so it redirects in-page
+      document.addEventListener('click', function(e) {
+        const a = e.target && e.target.closest ? e.target.closest('a') : null;
+        if (a && (a.hasAttribute('download') || (a.href && (a.href.includes('workers.dev') || a.href.includes('.mkv'))))) {
+          a.target = '_self';
+        }
+      }, true);
+
+      // 4. MutationObserver to auto-remove transparent ad overlays & popups
       const removeAdOverlays = () => {
         const overlays = document.querySelectorAll('div[style*="z-index"], iframe[src*="about:blank"], a[target="_blank"]');
         overlays.forEach(el => {
           if (el && el.parentNode && (el.style.zIndex > 100 || el.style.position === 'absolute' || el.style.position === 'fixed')) {
-            // Ensure video container itself is not deleted
-            if (!el.querySelector('video')) {
+            // Ensure video container and download elements are not deleted
+            if (!el.querySelector('video') && !el.closest('a[download]') && (!el.href || (!el.href.includes('workers.dev') && !el.href.includes('.mkv')))) {
               el.parentNode.removeChild(el);
             }
           }
@@ -117,7 +151,8 @@ export default function VideoScreen() {
     true;
   `;
 
-  // Intercepts taps on the site's download links and sends them to the app
+  // In-app download management interceptor (commented out so downloads behave normally)
+  /*
   const ELEMENT_SCRIPT = `
     (function() {
       if (window.__downloadInterceptor) return;
@@ -153,6 +188,7 @@ export default function VideoScreen() {
     })();
     true;
   `;
+  */
 
   function handleWebViewMessage(message: string) {
     if (message === "fullscreen-enter") {
@@ -162,21 +198,13 @@ export default function VideoScreen() {
     } else {
       try {
         const data = JSON.parse(message);
-        if (data.type === "download-request") {
-          console.log(`Download tapped: ${data.quality} -> ${data.href}`);
-          const label = data.quality ?? "video";
-          const fileName =
-            `${type ?? "video"}-${id}-S${seasonNumber}E${episodeNumber}-${label}`
-              .replace(/[^a-zA-Z0-9_-]/g, "_")
-              .concat(".mp4");
-          void startDownload({
-            quality: data.quality,
-            href: data.href,
-            fileName,
-          });
+        if (data.type === "open-url" && data.url) {
+          Linking.openURL(data.url).catch((err: unknown) =>
+            console.warn("Failed to open download URL:", err),
+          );
         }
       } catch {
-        console.warn("Unrecognized WebView message:", message);
+        // Ignore unrecognized messages
       }
     }
   }
@@ -184,6 +212,7 @@ export default function VideoScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <WebView
+        ref={webViewRef}
         source={{ uri: VIDEO_URL }}
         style={styles.webview}
         javaScriptEnabled
@@ -191,27 +220,43 @@ export default function VideoScreen() {
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
         allowsPictureInPictureMediaPlayback
+        allowsBackForwardNavigationGestures={true}
+        onNavigationStateChange={(navState: any) =>
+          setCanGoBack(navState.canGoBack)
+        }
         sharedCookiesEnabled
         originWhitelist={["*"]}
         // setSupportMultipleWindows={false}
-        onOpenWindow={(event) => event.preventDefault()}
+        onOpenWindow={(event: any) => {
+          const targetUrl = event.nativeEvent.targetUrl;
+          if (
+            targetUrl &&
+            (targetUrl.includes("workers.dev") || targetUrl.includes(".mkv"))
+          ) {
+            webViewRef.current?.injectJavaScript(
+              `window.location.href = "${targetUrl}"; true;`,
+            );
+          }
+          event.preventDefault();
+        }}
         allowsFullscreenVideo={true}
         injectedJavaScriptBeforeContentLoaded={AD_BLOCK_SCRIPT}
-        injectedJavaScript={`${FULLSCREEN_SCRIPT}\n${ELEMENT_SCRIPT}`}
-        onMessage={(event) => handleWebViewMessage(event.nativeEvent.data)}
-        onShouldStartLoadWithRequest={(request) => {
+        injectedJavaScript={FULLSCREEN_SCRIPT}
+        onMessage={(event: any) => handleWebViewMessage(event.nativeEvent.data)}
+        onShouldStartLoadWithRequest={(request: { url: string }) => {
           const { url } = request;
-          // console.log(url);
 
-          // Allow essential embed & CDN media requests only
+          // Allow essential embed, media streams, Cloudflare verification, and workers.dev download pages
           const isAllowed =
             url.includes("vidstuck.cc") ||
             url.includes("sacdn.hakunaymatata.com") ||
+            url.includes("workers.dev") ||
+            url.includes("cloudflare.com") ||
             url.includes("about:blank") ||
             url.includes(".m4s") ||
             url.includes(".m3u8") ||
-            url.includes(".mp4");
-          url.includes("workders.dev");
+            url.includes(".mp4") ||
+            url.includes(".mkv");
 
           // Block all external popup redirects on player clicks
           return isAllowed;

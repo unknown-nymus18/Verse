@@ -518,9 +518,7 @@ function DownloadProgress({ download }: { download: ActiveDownload | null }) {
           {download.waiting || percent === null ? (
             <ActivityIndicator color={colors.primary} size="small" />
           ) : (
-            <Text
-              style={[styles.percent, { color: colors.textSecondary }]}
-            >
+            <Text style={[styles.percent, { color: colors.textSecondary }]}>
               {percent}%
             </Text>
           )}

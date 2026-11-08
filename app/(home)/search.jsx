@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   FlatList,
   ImageBackground,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -19,10 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
@@ -56,6 +54,9 @@ export default function SearchScreen() {
 
   const [isAtTop, setAtTop] = useState(true);
   const flatListRef = useRef(null);
+
+  // Header = status-bar inset + paddingTop(8) + input(44) + paddingBottom(10)
+  const HEADER_HEIGHT = insets.top + 62;
 
   const FILTEROPTIONS = ["All", "Movies"];
 
@@ -133,7 +134,10 @@ export default function SearchScreen() {
   }
 
   function scrollToTop() {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    flatListRef.current?.scrollToOffset({
+      offset: Platform.OS === "ios" ? -HEADER_HEIGHT : 0,
+      animated: true,
+    });
   }
 
   async function onTrendingRefresh() {
@@ -192,28 +196,23 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }]}>
-      <SafeAreaView
-        edges={["top"]}
-        style={{
-          position: "absolute",
-          zIndex: 100,
-          width: "100%",
-          flexDirection: "row",
-          justifyContent: "center",
-          flex: 1,
-          paddingHorizontal: 10,
-          paddingTop: 10,
-        }}
+      {/* ── Blur Header ───────────────────────────────────────────────── */}
+      <BlurView
+        tint={blurTint}
+        blurReductionFactor={0}
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top,
+            // Android fallback: BlurView renders weakly, so back it with a
+            // semi-transparent version of the page bg colour.
+            backgroundColor: isDark
+              ? "rgba(8, 9, 11, 0.56)"
+              : "rgba(255, 255, 255, 0.56)",
+          },
+        ]}
       >
-        <BlurView
-          style={{
-            flex: 1,
-            overflow: "hidden",
-            borderRadius: styles.input.borderRadius,
-          }}
-          blurReductionFactor={0}
-          tint={blurTint}
-        >
+        <View style={styles.headerRow}>
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -222,57 +221,52 @@ export default function SearchScreen() {
             style={[
               styles.input,
               {
-                backgroundColor: "transaparent",
                 color: textColor,
                 borderColor: inputBorder,
-                borderWidth: isDark ? 1 : 0,
+                borderWidth: 1,
               },
             ]}
             returnKeyType="search"
             clearButtonMode="always"
           />
-        </BlurView>
-        {/* <View style={{ justifyContent: "center", alignItems: "center" }}>
-          <Ionicons
-            name="filter"
-            size={24}
-            color={isDark ? "white" : "black"}
-            style={{ margin: 5 }}
-            onPress={() => console.log("pressed")}
-          />
-        </View> */}
-        {!isAtTop && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Scroll to top"
-            hitSlop={6}
-            onPress={scrollToTop}
-            style={({ pressed }) => [
-              styles.scrollTopButton,
-              {
-                borderColor: scrollTopBorder,
-                opacity: pressed ? 0.75 : 1,
-                transform: [{ scale: pressed ? 0.94 : 1 }],
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.scrollTopBlur,
+          {/* Filter icon — currently unused */}
+          {/* <View style={{ justifyContent: "center", alignItems: "center" }}>
+            <Ionicons
+              name="filter"
+              size={24}
+              color={isDark ? "white" : "black"}
+              style={{ margin: 5 }}
+              onPress={() => console.log("pressed")}
+            />
+          </View> */}
+          {!isAtTop && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Scroll to top"
+              hitSlop={6}
+              onPress={scrollToTop}
+              style={({ pressed }) => [
+                styles.scrollTopButton,
                 {
-                  backgroundColor: scrollTopBg,
+                  borderColor: scrollTopBorder,
+                  opacity: pressed ? 0.75 : 1,
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
                 },
               ]}
             >
-              <Ionicons name="arrow-up" size={22} color={textColor} />
-            </View>
-          </Pressable>
-        )}
-      </SafeAreaView>
+              <View
+                style={[styles.scrollTopBlur, { backgroundColor: scrollTopBg }]}
+              >
+                <Ionicons name="arrow-up" size={22} color={textColor} />
+              </View>
+            </Pressable>
+          )}
+        </View>
+      </BlurView>
 
       {isLoading || isSearching ? (
         <SearchScreenSkeleton
-          paddingTop={insets.top + 70}
+          paddingTop={HEADER_HEIGHT}
           showFeatured={query.trim().length > 0}
         />
       ) : query === "" ? (
@@ -285,13 +279,36 @@ export default function SearchScreen() {
               <RefreshControl
                 refreshing={istrendindRefresing}
                 onRefresh={onTrendingRefresh}
-              ></RefreshControl>
+                progressViewOffset={HEADER_HEIGHT} // Android only
+              />
             }
+            contentInsetAdjustmentBehavior="never"
+            contentInset={
+              Platform.OS === "ios" ? { top: HEADER_HEIGHT } : undefined
+            }
+            contentOffset={
+              Platform.OS === "ios" ? { x: 0, y: -HEADER_HEIGHT } : undefined
+            }
+            scrollIndicatorInsets={{ top: HEADER_HEIGHT }}
             keyExtractor={(item, index) => `${item.id}-${index}`}
             contentContainerStyle={[
               styles.list,
-              { paddingTop: insets.top + 70 },
+              Platform.OS === "android" && { paddingTop: HEADER_HEIGHT },
             ]}
+            // onScroll={handleScroll(loadMoreTrending)}
+            // ref={flatListRef}
+            // data={allMovies}
+            // refreshControl={
+            //   <RefreshControl
+            //     refreshing={istrendindRefresing}
+            //     onRefresh={onTrendingRefresh}
+            //     progressViewOffset={HEADER_HEIGHT}
+            //     style={{ zIndex: 1000 }}
+
+            //   ></RefreshControl>
+            // }
+            // keyExtractor={(item, index) => `${item.id}-${index}`}
+            // contentContainerStyle={[styles.list, { paddingTop: HEADER_HEIGHT }]}
             numColumns={3}
             columnWrapperStyle={styles.row}
             showsVerticalScrollIndicator={false}
@@ -338,7 +355,7 @@ export default function SearchScreen() {
           onScroll={handleScroll(loadMoreResults)}
           data={results.slice(1)}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={[styles.list, { paddingTop: insets.top + 70 }]}
+          contentContainerStyle={[styles.list, { paddingTop: HEADER_HEIGHT }]}
           numColumns={3}
           columnWrapperStyle={styles.row}
           showsVerticalScrollIndicator={false}
@@ -473,12 +490,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  /** Full-width blur header bar */
+  header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    overflow: "hidden",
+    // hairline bottom border for visual separation
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(128,128,128,0.25)",
+  },
+  /** Inner row: search input + optional scroll-to-top button */
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
+    gap: 8,
+  },
   input: {
+    flex: 1,
     height: 44,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 14,
     fontSize: 15,
-    width: "100%",
   },
   scrollTopButton: {
     height: 44,

@@ -37,7 +37,7 @@ export const Colors = {
     dialogBg: "#ffffff",
     dialogBorder: "#e4e4e7",
     inputBg: "#f1f1f3",
-    inputBorder: "transparent",
+    inputBorder: "#d1d1d6",
     accent: "#08090b",
 
     // Tabs & Navigation
@@ -47,7 +47,7 @@ export const Colors = {
     activeColor: "#000000",
     inactiveColor: "#92929b",
     blurTint: "light" as const,
-    searchBlurTint: "dark" as const,
+    searchBlurTint: "light" as const,
 
     // Skeleton
     baseColor: "#e5e5e5",
@@ -115,8 +115,8 @@ export const Colors = {
     tabBarBorder: "rgba(255, 255, 255, 0.1)",
     activeColor: "#ffffff",
     inactiveColor: "#71717a",
-    blurTint: "prominent" as const,
-    searchBlurTint: "light" as const,
+    blurTint: "dark" as const,
+    searchBlurTint: "dark" as const,
 
     // Skeleton
     baseColor: "#18181b",
