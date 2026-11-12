@@ -118,6 +118,7 @@ export default function HomeScreen() {
 
       const data = await response.json();
       const newMovies = data.results?.slice(0, 11) ?? [];
+      console.log(newMovies);
       if (isMountedRef.current) setMovies(newMovies);
     } catch (error) {
       console.error("Unable to load trending movies", error);

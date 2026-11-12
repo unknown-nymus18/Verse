@@ -1,6 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { differenceInCalendarDays } from "date-fns";
-import AppBlurView from "./AppBlurView";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { router } from "expo-router";
@@ -13,6 +12,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import AppBlurView from "./AppBlurView";
 import { useThemeProvider } from "./ThemeProvider";
 
 interface Props {
@@ -67,7 +67,7 @@ export default function MovieCard({
   const { textColor, ratingColor, detailColor, posterBg, placeholderBg } =
     colors;
 
-  const imageRes = isDataSaver ? "w154" : "w185";
+  const imageRes = isDataSaver ? "w154" : "w500";
 
   const daysDifference = differenceInCalendarDays(
     new Date(),
