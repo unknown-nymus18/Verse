@@ -274,7 +274,10 @@ function ReleaseCountdown({
           accessibilityRole="button"
           accessibilityState={{ disabled: isReminderBusy }}
           disabled={isReminderBusy}
-          onPress={toggleReminder}
+          onPress={() => {
+            Haptics.selectionAsync();
+            toggleReminder();
+          }}
           style={[
             styles.releaseReminderButton,
             { backgroundColor: tileColor, borderColor },
