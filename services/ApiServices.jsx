@@ -98,9 +98,9 @@ async function getSeasonDetails(series_id, season_number) {
   return response;
 }
 
-async function getMovieReviews(movie_id){
+async function getMovieReviews(id,media_type){
   const response = await fetch(
-    `https://api.themoviedb.org/3/movie/${movie_id}/reviews?language=en-US&page=1`,
+    `https://api.themoviedb.org/3/${media_type}/${id}/reviews?language=en-US&page=1`,
     {
       headers: {
         accept: "application/json",

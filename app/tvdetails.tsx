@@ -1,7 +1,7 @@
+import Text from "@/components/AppText";
 import DetailsScreenSkeleton from "@/components/DetailsScreenSkeleton";
 import EpisodeCard from "@/components/EpisodeCard";
 import MovieCard from "@/components/Moviecard";
-import Text from "@/components/AppText";
 import { useThemeProvider } from "@/components/ThemeProvider";
 import {
   getSeasonDetails,
@@ -25,6 +25,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -171,7 +172,6 @@ export default function TvDetails() {
     return () => clearTimeout(timer);
   }, [id, delay]);
 
-  // Stop the trailer when this screen loses focus (navigating to /play, etc.)
   useFocusEffect(
     useCallback(() => {
       return () => setPlaying(false);
@@ -450,6 +450,18 @@ export default function TvDetails() {
               ))}
             </View>
           )}
+
+          <TouchableOpacity
+          onPress={() =>
+            router.push({
+              pathname: "/reviews",
+              params: { id, media_type: "tv" },
+            })
+          }
+          style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 10 }}>
+            <Text style={{ color: '#1e90ff',textDecorationLine: 'underline' }}>Reviews</Text>
+            <Ionicons name="chevron-forward" size={16} color="#1e90ff" />
+          </TouchableOpacity>
 
           {!!seriesData.overview && (
             <>

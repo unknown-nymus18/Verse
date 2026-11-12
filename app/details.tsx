@@ -597,7 +597,12 @@ export default function DetailsScreen() {
           )}
 
           <TouchableOpacity 
-          onPress={()=>router.push({pathname:"/reviews",params:{id}})}
+          onPress={() =>
+            router.push({
+              pathname: "/reviews",
+              params: { id, media_type: "movie" },
+            })
+          }
           style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 10 }}>
             <Text style={{ color: '#1e90ff',textDecorationLine: 'underline' }}>Reviews</Text>
             <Ionicons name="chevron-forward" size={16} color="#1e90ff" />

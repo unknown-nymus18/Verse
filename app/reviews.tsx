@@ -107,7 +107,14 @@ function getReviewPreview(content: string) {
 }
 
 export default function ReviewsScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, media_type: requestedMediaType } = useLocalSearchParams<{
+    id?: string;
+    media_type?: string;
+  }>();
+  const mediaType =
+    requestedMediaType === "movie" || requestedMediaType === "tv"
+      ? requestedMediaType
+      : null;
   const { colors } = useThemeProvider();
   const { bgColor, borderColor, cardBg, primary, primaryText, secondaryText, subText } =
     colors;
@@ -118,7 +125,7 @@ export default function ReviewsScreen() {
   const [expandedReviewIds, setExpandedReviewIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const requestKey = id ? `${id}:${retryCount}` : "";
+  const requestKey = id && mediaType ? `${mediaType}:${id}:${retryCount}` : "";
 
   function toggleReviewExpanded(reviewId: string) {
     setExpandedReviewIds((current) => {
@@ -133,13 +140,13 @@ export default function ReviewsScreen() {
   }
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !mediaType) return;
 
     let isCurrentRequest = true;
 
     async function loadReviews() {
       try {
-        const response = await getMovieReviews(id);
+        const response = await getMovieReviews(id, mediaType);
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`);
         }
@@ -172,13 +179,15 @@ export default function ReviewsScreen() {
     return () => {
       isCurrentRequest = false;
     };
-  }, [id, requestKey]);
+  }, [id, mediaType, requestKey]);
 
-  const state: ReviewsState = !id
+  const state: ReviewsState = !id || !mediaType
     ? {
         requestKey,
         status: "error",
-        message: "A movie ID was not provided.",
+        message: !id
+          ? "A title ID was not provided."
+          : "A valid media type was not provided.",
       }
     : loadState?.requestKey === requestKey
       ? loadState
@@ -230,7 +239,7 @@ export default function ReviewsScreen() {
                 <AppText style={[styles.emptyMessage, { color: secondaryText }]}>
                   {state.message}
                 </AppText>
-                {id ? (
+                {id && mediaType ? (
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => setRetryCount((count) => count + 1)}
@@ -366,7 +375,7 @@ export default function ReviewsScreen() {
       </BlurTargetView>
       <AppBlurView
         blurTarget={blurTargetRef}
-        intensity={80}
+        intensity={40}
         style={[
           styles.header,
           {
@@ -417,7 +426,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     paddingHorizontal: 16,
   },
   headerButton: {
