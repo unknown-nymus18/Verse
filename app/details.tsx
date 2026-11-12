@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import YoutubePlayer from "react-native-youtube-iframe";
 
 import MovieCard from "@/components/Moviecard";
+import { isValid, parseISO } from "date-fns";
 import {
   FlatList,
   Image,
@@ -31,6 +32,7 @@ import {
   isItemSaved,
   toggleSavedItem,
 } from "../services/ApiServices";
+
 
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
@@ -78,6 +80,7 @@ interface MovieDetails {
   id: number;
   title?: string;
   name?: string;
+  media_type: "movie" | "tv";
   overview: string;
   poster_path: string | null;
   backdrop_path: string | null;
@@ -105,6 +108,82 @@ function formatRuntime(minutes: number) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+
+function ReleaseCountdown({
+  releaseDate,
+  labelColor,
+  numberColor,
+  tileColor,
+  borderColor,
+  shadowColor,
+}: {
+  releaseDate?: string;
+  labelColor: string;
+  numberColor: string;
+  tileColor: string;
+  borderColor: string;
+  shadowColor: string;
+}) {
+  const [now, setNow] = useState<number | null>(null);
+  const parsedDate = releaseDate ? parseISO(releaseDate) : null;
+  const releaseTimestamp =
+    parsedDate && isValid(parsedDate) ? parsedDate.getTime() : null;
+  const isUpcoming =
+    releaseTimestamp !== null && (now === null || releaseTimestamp > now);
+
+  useEffect(() => {
+    if (!isUpcoming) return;
+
+    const initialUpdate = setTimeout(() => setNow(Date.now()), 0);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      clearTimeout(initialUpdate);
+      clearInterval(timer);
+    };
+  }, [isUpcoming, releaseTimestamp]);
+
+  if (!isUpcoming || releaseTimestamp === null || now === null) return null;
+
+  const secondsRemaining = Math.ceil((releaseTimestamp - now) / 1000);
+  const days = Math.floor(secondsRemaining / 86400);
+  const hours = Math.floor((secondsRemaining % 86400) / 3600);
+  const minutes = Math.floor((secondsRemaining % 3600) / 60);
+  const seconds = secondsRemaining % 60;
+  const units = [
+    { label: "DAYS", value: String(days).padStart(2, "0") },
+    { label: "HOURS", value: String(hours).padStart(2, "0") },
+    { label: "MINUTES", value: String(minutes).padStart(2, "0") },
+    { label: "SECONDS", value: String(seconds).padStart(2, "0") },
+  ];
+
+  return (
+    <View style={styles.releaseCountdown}>
+      {units.map(({ label, value }) => (
+        <View key={label} style={styles.countdownUnit}>
+          <Text style={[styles.countdownLabel, { color: labelColor }]}>
+            {label}
+          </Text>
+          <View
+            style={[
+              styles.countdownTile,
+              { backgroundColor: tileColor, borderColor, shadowColor },
+            ]}
+          >
+            <Text
+              style={[
+                styles.countdownNumber,
+                { color: numberColor },
+                value.length > 2 && styles.countdownLongNumber,
+              ]}
+            >
+              {value}
+            </Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 export default function DetailsScreen() {
@@ -391,6 +470,15 @@ export default function DetailsScreen() {
             )}
           </View>
 
+          <ReleaseCountdown
+            releaseDate={releaseDate}
+            labelColor={secondaryText}
+            numberColor={primaryText}
+            tileColor={cardBg}
+            borderColor={listBtnBorder}
+            shadowColor={subText}
+          />
+
           {!!movie.genres?.length && (
             <View style={styles.genreRow}>
               {movie.genres.map((genre) => (
@@ -628,6 +716,45 @@ const styles = StyleSheet.create({
   },
   statsText: {
     fontSize: 13,
+  },
+  releaseCountdown: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 14,
+  },
+  countdownUnit: {
+    flex: 1,
+    alignItems: "center",
+    minWidth: 0,
+  },
+  countdownLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    marginBottom: 8,
+  },
+  countdownTile: {
+    width: "100%",
+    height: 72,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderRadius: 6,
+    borderWidth: 1,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+  },
+  countdownNumber: {
+    fontSize: 46,
+    fontWeight: "900",
+    fontVariant: ["tabular-nums"],
+    lineHeight: 58,
+  },
+  countdownLongNumber: {
+    fontSize: 34,
   },
   genreRow: {
     flexDirection: "row",
