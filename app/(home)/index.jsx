@@ -1,5 +1,6 @@
 import GenreRow from "@/components/GenreRow";
 import HomeScreenSkeleton from "@/components/HomeScreenSkeleton";
+import Text from "@/components/AppText";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useThemeProvider } from "../../components/ThemeProvider";
 
@@ -13,7 +14,6 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 
@@ -118,7 +118,6 @@ export default function HomeScreen() {
 
       const data = await response.json();
       const newMovies = data.results?.slice(0, 11) ?? [];
-      console.log(newMovies);
       if (isMountedRef.current) setMovies(newMovies);
     } catch (error) {
       console.error("Unable to load trending movies", error);

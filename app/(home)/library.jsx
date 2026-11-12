@@ -1,5 +1,6 @@
 import MovieCard from "@/components/Moviecard";
 import SearchScreenSkeleton from "@/components/SearchScreenSkeleton";
+import Text from "@/components/AppText";
 import { deleteMeta, DOWNLOAD_DIR, ensureMeta } from "@/services/DownloadMeta";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as FileSystem from "expo-file-system/legacy";
@@ -12,7 +13,6 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

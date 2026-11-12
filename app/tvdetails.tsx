@@ -1,6 +1,7 @@
 import DetailsScreenSkeleton from "@/components/DetailsScreenSkeleton";
 import EpisodeCard from "@/components/EpisodeCard";
 import MovieCard from "@/components/Moviecard";
+import Text from "@/components/AppText";
 import { useThemeProvider } from "@/components/ThemeProvider";
 import {
   getSeasonDetails,
@@ -24,7 +25,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from "react-native";

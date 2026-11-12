@@ -1,4 +1,5 @@
 import AppBlurView from "@/components/AppBlurView";
+import Text from "@/components/AppText";
 import { useThemeProvider } from "@/components/ThemeProvider";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { BlurTargetView } from "expo-blur";
@@ -11,7 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const TABS = [

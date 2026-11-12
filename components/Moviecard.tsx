@@ -4,10 +4,10 @@ import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect } from "react";
+import Text from "./AppText";
 import {
   StyleProp,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   ViewStyle,
@@ -111,7 +111,6 @@ export default function MovieCard({
             },
           ]}
         >
-          {/* Cached expo-image using StyleSheet.absoluteFill */}
           <Image
             source={{
               uri: `https://image.tmdb.org/t/p/${imageRes}${posterPath}`,
@@ -121,8 +120,6 @@ export default function MovieCard({
             transition={200}
             cachePolicy="memory-disk"
           />
-
-          {/* Overlay Badges */}
           {isRecentlyReleased && (
             <View
               style={{

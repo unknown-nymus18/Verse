@@ -3,6 +3,7 @@ import { File } from "expo-file-system";
 import * as FileSystem from "expo-file-system/legacy";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import * as Sharing from "expo-sharing";
+import Text from "./AppText";
 import {
   createContext,
   useCallback,
@@ -17,7 +18,6 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
 } from "react-native";

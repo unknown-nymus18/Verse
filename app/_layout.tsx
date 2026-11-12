@@ -1,10 +1,18 @@
 import { router, Stack } from "expo-router";
 import * as Notifications from "expo-notifications";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 import { Platform, StatusBar } from "react-native";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { DownloadProvider } from "../components/DownloadProvider";
 import { ThemeProvider, useThemeProvider } from "../components/ThemeProvider";
+
+if (Platform.OS !== "web") {
+  SplashScreen.preventAutoHideAsync().catch((error) =>
+    console.warn("Failed to keep the splash screen visible:", error),
+  );
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -47,6 +55,12 @@ function RootLayoutNav() {
     return () => subscription.remove();
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== "web") {
+      SplashScreen.hide();
+    }
+  }, []);
+
   return (
     <>
       <StatusBar
@@ -86,6 +100,21 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter: require("../assets/fonts/Inter[opsz,wght].ttf"),
+    Oswald: require("../assets/fonts/Oswald[wght].ttf"),
+  });
+
+  useEffect(() => {
+    if (fontError) {
+      console.error("Failed to load app fonts:", fontError);
+    }
+  }, [fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>

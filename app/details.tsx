@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import YoutubePlayer from "react-native-youtube-iframe";
 
 import MovieCard from "@/components/Moviecard";
+import Text from "@/components/AppText";
 import { isValid, parseISO } from "date-fns";
 import {
   FlatList,
@@ -18,7 +19,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   useWindowDimensions,
   View,

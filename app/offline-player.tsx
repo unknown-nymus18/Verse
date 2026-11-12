@@ -3,7 +3,8 @@ import { useKeepAwake } from "expo-keep-awake";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import Text from "@/components/AppText";
+import { StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function OfflinePlayerScreen() {

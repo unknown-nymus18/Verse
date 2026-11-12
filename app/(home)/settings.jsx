@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Picker } from "@react-native-picker/picker";
+import Text from "@/components/AppText";
 import { useEffect, useState } from "react";
 import {
   Modal,
@@ -7,7 +8,6 @@ import {
   Pressable,
   StyleSheet,
   Switch,
-  Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

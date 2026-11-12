@@ -1,5 +1,6 @@
 import { memo } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
+import Text from "./AppText";
 import MovieCard from "./Moviecard";
 import { useThemeProvider } from "./ThemeProvider";
 

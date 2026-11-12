@@ -1,4 +1,5 @@
 import AppBlurView from "@/components/AppBlurView";
+import Text from "@/components/AppText";
 import MovieCard from "@/components/Moviecard";
 import SearchScreenSkeleton from "@/components/SearchScreenSkeleton";
 import { useThemeProvider } from "@/components/ThemeProvider";
@@ -16,7 +17,6 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -500,6 +500,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     fontSize: 15,
+    fontFamily: "Inter",
   },
   scrollTopButton: {
     height: 44,
