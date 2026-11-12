@@ -6,17 +6,17 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import YoutubePlayer from "react-native-youtube-iframe";
 
-import MovieCard from "@/components/Moviecard";
 import Text from "@/components/AppText";
+import MovieCard from "@/components/Moviecard";
 import { isValid, parseISO } from "date-fns";
 import {
+  Alert,
   FlatList,
   Image,
   ImageBackground,
-  Alert,
   Linking,
-  Pressable,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -377,12 +377,6 @@ export default function DetailsScreen() {
     }, []),
   );
 
-  function goToRecommendation(item: RecommendationItem) {
-    router.replace({
-      pathname: "/details",
-      params: { id: String(item.id) },
-    });
-  }
 
   const onStateChange = useCallback((state: string) => {
     if (state === "ended") {
@@ -587,19 +581,6 @@ export default function DetailsScreen() {
             )}
           </View>
 
-          <ReleaseCountdown
-            releaseDate={releaseDate}
-            title={displayTitle}
-            reminderKey={`release-reminder:${movie.media_type}:${movie.id}`}
-            route={movie.media_type === "tv" ? "tvdetails" : "details"}
-            mediaId={String(movie.id)}
-            labelColor={secondaryText}
-            numberColor={primaryText}
-            tileColor={cardBg}
-            borderColor={listBtnBorder}
-            shadowColor={subText}
-          />
-
           {!!movie.genres?.length && (
             <View style={styles.genreRow}>
               {movie.genres.map((genre) => (
@@ -614,6 +595,27 @@ export default function DetailsScreen() {
               ))}
             </View>
           )}
+
+          <TouchableOpacity 
+          onPress={()=>router.push({pathname:"/reviews",params:{id}})}
+          style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 10 }}>
+            <Text style={{ color: '#1e90ff',textDecorationLine: 'underline' }}>Reviews</Text>
+            <Ionicons name="chevron-forward" size={16} color="#1e90ff" />
+          </TouchableOpacity>
+
+          <ReleaseCountdown
+            releaseDate={releaseDate}
+            title={displayTitle}
+            reminderKey={`release-reminder:${movie.media_type}:${movie.id}`}
+            route={movie.media_type === "tv" ? "tvdetails" : "details"}
+            mediaId={String(movie.id)}
+            labelColor={secondaryText}
+            numberColor={primaryText}
+            tileColor={cardBg}
+            borderColor={listBtnBorder}
+            shadowColor={subText}
+          />
+
 
           {!!movie.overview && (
             <>

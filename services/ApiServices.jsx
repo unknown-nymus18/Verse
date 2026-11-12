@@ -98,6 +98,20 @@ async function getSeasonDetails(series_id, season_number) {
   return response;
 }
 
+async function getMovieReviews(movie_id){
+  const response = await fetch(
+    `https://api.themoviedb.org/3/movie/${movie_id}/reviews?language=en-US&page=1`,
+    {
+      headers: {
+        accept: "application/json",
+        Authorization: `Bearer ${TOKEN}`,
+      },
+    },
+  )
+
+  return response;
+}
+
 async function setLocalTheme(isDark) {
   try {
     await AsyncStorage.setItem(THEME_KEY, JSON.stringify(isDark));
@@ -234,8 +248,7 @@ export {
   getAllMovies,
   getDataSaver,
   getGenreMovies,
-  getMovieDetails,
-  getSavedItems,
+  getMovieDetails, getMovieReviews, getSavedItems,
   getSeasonDetails,
   getSubtitlesStorage,
   getTrendingMovies,

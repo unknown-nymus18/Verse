@@ -1,9 +1,9 @@
-import { router, Stack } from "expo-router";
-import * as Notifications from "expo-notifications";
 import { useFonts } from "expo-font";
+import * as Notifications from "expo-notifications";
+import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { Platform, StatusBar } from "react-native";
 import { useEffect } from "react";
+import { Platform, StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { DownloadProvider } from "../components/DownloadProvider";
 import { ThemeProvider, useThemeProvider } from "../components/ThemeProvider";
@@ -93,6 +93,10 @@ function RootLayoutNav() {
             statusBarHidden: Platform.OS === "ios" ? false : true,
           }}
         ></Stack.Screen>
+        <Stack.Screen
+          name="reviews"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="offline-player" options={{ headerShown: false }} />
       </Stack>
     </>
