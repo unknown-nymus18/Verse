@@ -12,7 +12,6 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "app/index.jsx",
-    "app/(details)/index.jsx",
     "app/details.jsx",
     "app/offline-player.tsx",
     "app/(home)/index.tsx",
