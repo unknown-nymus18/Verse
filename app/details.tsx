@@ -12,8 +12,10 @@ import {
   FlatList,
   Image,
   ImageBackground,
+  Alert,
   Linking,
   Pressable,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,6 +34,12 @@ import {
   isItemSaved,
   toggleSavedItem,
 } from "../services/ApiServices";
+import {
+  cancelReleaseReminder,
+  findReleaseReminder,
+  scheduleReleaseReminder,
+  type ReleaseDetailsRoute,
+} from "../services/ReleaseNotifications";
 
 
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
@@ -112,6 +120,10 @@ function formatRuntime(minutes: number) {
 
 function ReleaseCountdown({
   releaseDate,
+  title,
+  reminderKey,
+  route,
+  mediaId,
   labelColor,
   numberColor,
   tileColor,
@@ -119,6 +131,10 @@ function ReleaseCountdown({
   shadowColor,
 }: {
   releaseDate?: string;
+  title: string;
+  reminderKey: string;
+  route: ReleaseDetailsRoute;
+  mediaId: string;
   labelColor: string;
   numberColor: string;
   tileColor: string;
@@ -126,6 +142,8 @@ function ReleaseCountdown({
   shadowColor: string;
 }) {
   const [now, setNow] = useState<number | null>(null);
+  const [reminderId, setReminderId] = useState<string | null>(null);
+  const [isReminderBusy, setReminderBusy] = useState(false);
   const parsedDate = releaseDate ? parseISO(releaseDate) : null;
   const releaseTimestamp =
     parsedDate && isValid(parsedDate) ? parsedDate.getTime() : null;
@@ -143,6 +161,73 @@ function ReleaseCountdown({
     };
   }, [isUpcoming, releaseTimestamp]);
 
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+
+    let isMounted = true;
+    findReleaseReminder(reminderKey, releaseTimestamp)
+      .then((identifier) => {
+        if (isMounted) setReminderId(identifier);
+      })
+      .catch((error) => {
+        console.error("Unable to check release reminder", error);
+        if (isMounted) {
+          Alert.alert(
+            "Reminder unavailable",
+            "Could not check this title's notification reminder.",
+          );
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [reminderKey, releaseTimestamp]);
+
+  async function toggleReminder() {
+    if (
+      isReminderBusy ||
+      releaseTimestamp === null ||
+      releaseTimestamp <= Date.now()
+    ) {
+      return;
+    }
+
+    setReminderBusy(true);
+    try {
+      if (reminderId) {
+        await cancelReleaseReminder(reminderId);
+        setReminderId(null);
+        return;
+      }
+
+      const identifier = await scheduleReleaseReminder(
+        reminderKey,
+        title,
+        releaseTimestamp,
+        route,
+        mediaId,
+      );
+      if (!identifier) {
+        Alert.alert(
+          "Notifications are disabled",
+          "Allow notifications in your device settings to receive release reminders.",
+        );
+        return;
+      }
+
+      setReminderId(identifier);
+    } catch (error) {
+      console.error("Unable to update release reminder", error);
+      Alert.alert(
+        "Reminder unavailable",
+        "Could not update this title's notification reminder. Please try again.",
+      );
+    } finally {
+      setReminderBusy(false);
+    }
+  }
+
   if (!isUpcoming || releaseTimestamp === null || now === null) return null;
 
   const secondsRemaining = Math.ceil((releaseTimestamp - now) / 1000);
@@ -158,30 +243,59 @@ function ReleaseCountdown({
   ];
 
   return (
-    <View style={styles.releaseCountdown}>
-      {units.map(({ label, value }) => (
-        <View key={label} style={styles.countdownUnit}>
-          <Text style={[styles.countdownLabel, { color: labelColor }]}>
-            {label}
-          </Text>
-          <View
-            style={[
-              styles.countdownTile,
-              { backgroundColor: tileColor, borderColor, shadowColor },
-            ]}
-          >
-            <Text
+    <View>
+      <View style={styles.releaseCountdown}>
+        {units.map(({ label, value }) => (
+          <View key={label} style={styles.countdownUnit}>
+            <Text style={[styles.countdownLabel, { color: labelColor }]}>
+              {label}
+            </Text>
+            <View
               style={[
-                styles.countdownNumber,
-                { color: numberColor },
-                value.length > 2 && styles.countdownLongNumber,
+                styles.countdownTile,
+                { backgroundColor: tileColor, borderColor, shadowColor },
               ]}
             >
-              {value}
-            </Text>
+              <Text
+                style={[
+                  styles.countdownNumber,
+                  { color: numberColor },
+                  value.length > 2 && styles.countdownLongNumber,
+                ]}
+              >
+                {value}
+              </Text>
+            </View>
           </View>
-        </View>
-      ))}
+        ))}
+      </View>
+      {Platform.OS !== "web" && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isReminderBusy }}
+          disabled={isReminderBusy}
+          onPress={toggleReminder}
+          style={[
+            styles.releaseReminderButton,
+            { backgroundColor: tileColor, borderColor },
+          ]}
+        >
+          <Ionicons
+            name={
+              reminderId ? "notifications-off-outline" : "notifications-outline"
+            }
+            size={17}
+            color={numberColor}
+          />
+          <Text style={[styles.releaseReminderText, { color: numberColor }]}>
+            {isReminderBusy
+              ? "Updating..."
+              : reminderId
+                ? "Cancel reminder"
+                : "Notify me"}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -472,6 +586,10 @@ export default function DetailsScreen() {
 
           <ReleaseCountdown
             releaseDate={releaseDate}
+            title={displayTitle}
+            reminderKey={`release-reminder:${movie.media_type}:${movie.id}`}
+            route={movie.media_type === "tv" ? "tvdetails" : "details"}
+            mediaId={String(movie.id)}
             labelColor={secondaryText}
             numberColor={primaryText}
             tileColor={cardBg}
@@ -713,6 +831,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 14,
     marginTop: 6,
+    marginBottom:10,
   },
   statsText: {
     fontSize: 13,
@@ -721,6 +840,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     marginTop: 14,
+  },
+  releaseReminderButton: {
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  releaseReminderText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
   countdownUnit: {
     flex: 1,

@@ -41,7 +41,13 @@
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save videos to your gallery."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
