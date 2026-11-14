@@ -718,6 +718,7 @@ export default function DetailsScreen() {
               />
             </>
           )}
+          <View style={{height:50}}></View>
         </ScrollView>
       {/* </SafeAreaView> */}
     </View>

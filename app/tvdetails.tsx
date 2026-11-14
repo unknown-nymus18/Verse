@@ -662,6 +662,7 @@ export default function TvDetails() {
               />
             </>
           )}
+          <View style={{height:50}}></View>
         </ScrollView>
       {/* </SafeAreaView> */}
     </View>

@@ -1,11 +1,224 @@
-import { useDownloadManager } from "@/components/DownloadProvider";
 import { getSubtitlesStorage } from "@/services/ApiServices";
 import { useKeepAwake } from "expo-keep-awake";
 import { useLocalSearchParams, useNavigation } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { BackHandler, Linking, Platform, StyleSheet } from "react-native";
+import * as ScreenOrientation from "expo-screen-orientation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  BackHandler,
+  Linking,
+  Platform,
+  StatusBar,
+  StyleSheet,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
+
+function isDownloadRedirect(url: string) {
+  return (
+    url.toLowerCase().includes("workers.dev") ||
+    /\.(mp4|mkv|bin)(?:[?#]|$)/i.test(url)
+  );
+}
+
+// Block download actions while filtering unrelated ad popups.
+// Overlay removal is conservative and fully disabled while fullscreen,
+// because removing the fullscreen element (or an ancestor) exits fullscreen.
+const AD_BLOCK_SCRIPT = `
+  (function() {
+    if (window.__adBlockInstalled) return;
+    window.__adBlockInstalled = true;
+
+    const isDownloadRedirect = url =>
+      typeof url === 'string' &&
+      (url.toLowerCase().includes('workers.dev') || /\\.(mp4|mkv|bin)(?:[?#]|$)/i.test(url));
+    const reportDownloadBlocked = () => {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: "download-unavailable"
+        }));
+      }
+    };
+
+    // Lock window.open so ad scripts can't restore it and open popups
+    // (a popup window being created exits fullscreen on Android).
+    const blockedOpen = function(url) {
+      if (typeof url === 'string' && isDownloadRedirect(url)) {
+        reportDownloadBlocked();
+      }
+      return null;
+    };
+    try {
+      Object.defineProperty(window, 'open', {
+        value: blockedOpen,
+        writable: false,
+        configurable: false
+      });
+    } catch (e) {
+      window.open = blockedOpen;
+    }
+
+    const originalClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function() {
+      if (isDownloadRedirect(this.href) || this.hasAttribute('download')) {
+        reportDownloadBlocked();
+        return;
+      }
+      if (this.target === '_blank' || (this.href && !this.href.includes('vidstuck.xyz') && !this.href.includes('vidstuck.cc'))) {
+        return;
+      }
+      return originalClick.apply(this, arguments);
+    };
+
+    // Download blocking
+    document.addEventListener('click', function(e) {
+      const a = e.target && e.target.closest ? e.target.closest('a') : null;
+      const control = e.target && e.target.closest
+        ? e.target.closest('a, button, [role="button"], input[type="button"], input[type="submit"]')
+        : null;
+      const label = control
+        ? [control.textContent, control.getAttribute('aria-label'), control.getAttribute('title'), control.getAttribute('value')]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+        : '';
+      if (
+        (a && (a.hasAttribute('download') || isDownloadRedirect(a.href))) ||
+        /\\bdownload\\b/i.test(label)
+      ) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        reportDownloadBlocked();
+      }
+    }, true);
+
+    // Cancel clicks on target="_blank" and cross-host links before ad
+    // scripts can act on them.
+    document.addEventListener('click', function(e) {
+      const a = e.target && e.target.closest ? e.target.closest('a') : null;
+      if (!a) return;
+      const isHttp = a.protocol === 'http:' || a.protocol === 'https:';
+      if (a.target === '_blank' || (isHttp && a.host !== location.host)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }, true);
+
+    const isFullscreenActive = () =>
+      Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+
+    const removeAdOverlays = () => {
+      if (isFullscreenActive()) return;
+
+      document
+        .querySelectorAll('div[style*="z-index"], iframe[src*="about:blank"], a[target="_blank"]')
+        .forEach(el => {
+          if (!el.parentNode) return;
+          const style = el.style;
+          const positioned = style.position === 'absolute' || style.position === 'fixed';
+          const z = parseInt(style.zIndex, 10) || 0;
+
+          const looksLikeAd =
+            z >= 1000000 ||
+            ((el.tagName === 'A' || el.tagName === 'IFRAME') && positioned);
+          if (!looksLikeAd) return;
+
+          if (el.querySelector('video, iframe, canvas')) return;
+          if (el.closest('a[download]')) return;
+          if (el.href && isDownloadRedirect(el.href)) return;
+
+          el.parentNode.removeChild(el);
+        });
+    };
+
+    const start = () => {
+      removeAdOverlays();
+      setInterval(removeAdOverlays, 500);
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start);
+    } else {
+      start();
+    }
+  })();
+  true;
+`;
+
+const FULLSCREEN_SCRIPT = `
+  (function() {
+    if (window.__fsTrackerInstalled) return;
+    window.__fsTrackerInstalled = true;
+
+    const frameId = Math.random().toString(36).slice(2);
+    let reported = false;
+    let videoFullscreen = false;
+    let timer;
+
+    const post = active => {
+      reported = active;
+      try {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: "fullscreen-state",
+            frameId,
+            active
+          }));
+        }
+      } catch (e) {}
+    };
+
+    const isActive = () =>
+      Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.webkitCurrentFullScreenElement ||
+        videoFullscreen
+      );
+
+    // Entering is debounced longer (avoids flapping during the rotation);
+    // exiting is reported quickly so the app can lock portrait right away.
+    const sync = () => {
+      window.clearTimeout(timer);
+      const delay = isActive() ? 250 : 80;
+      timer = window.setTimeout(() => {
+        const next = isActive();
+        if (next !== reported) post(next);
+      }, delay);
+    };
+
+    document.addEventListener("fullscreenchange", sync, true);
+    document.addEventListener("webkitfullscreenchange", sync, true);
+    document.addEventListener("webkitbeginfullscreen", () => {
+      videoFullscreen = true;
+      sync();
+    }, true);
+    document.addEventListener("webkitendfullscreen", () => {
+      videoFullscreen = false;
+      sync();
+    }, true);
+    window.addEventListener("pagehide", () => {
+      window.clearTimeout(timer);
+      if (reported) post(false);
+    });
+  })();
+  true;
+`;
+
+const EXIT_FULLSCREEN_SCRIPT = `
+  (function() {
+    try {
+      var d = document;
+      var exit = d.exitFullscreen || d.webkitExitFullscreen;
+      if (exit) exit.call(d);
+      var v = d.querySelector('video');
+      if (v && v.webkitDisplayingFullscreen && v.webkitExitFullscreen) v.webkitExitFullscreen();
+    } catch (e) {}
+  })();
+  true;
+`;
+
+const PLAYER_SCRIPT = `${AD_BLOCK_SCRIPT}\n${FULLSCREEN_SCRIPT}`;
+
 export default function VideoScreen() {
   useKeepAwake();
 
@@ -21,21 +234,102 @@ export default function VideoScreen() {
     episodeNumber?: string;
   }>();
   const navigation = useNavigation();
-  const { startDownload } = useDownloadManager();
 
   const [subtitle, setSubtitle] = useState<string | null>(null);
   const webViewRef = useRef<any>(null);
-  const [canGoBack, setCanGoBack] = useState(false);
-  const downloadFlowActive = useRef(false);
-  const pendingDownload = useRef<{ quality: string | null } | null>(null);
+  const canGoBack = useRef(false);
+  const downloadNoticeVisible = useRef(false);
+  const fullscreenFrames = useRef(new Set<string>());
+  const isFullscreen = useRef(false);
+  const orientationTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const previousLock = useRef<ScreenOrientation.OrientationLock>(
+    ScreenOrientation.OrientationLock.DEFAULT,
+  );
+
+  const applyFullscreen = useCallback(
+    (active: boolean) => {
+      isFullscreen.current = active;
+
+      // Cancel any pending portrait re-assertions from a previous exit.
+      orientationTimers.current.forEach(clearTimeout);
+      orientationTimers.current = [];
+
+      StatusBar.setHidden(active, "fade");
+
+      const lockPortrait = () =>
+        ScreenOrientation.lockAsync(
+          ScreenOrientation.OrientationLock.PORTRAIT_UP,
+        ).catch((error: unknown) =>
+          console.warn("Failed to lock portrait orientation:", error),
+        );
+
+      if (active) {
+        navigation.setOptions({ orientation: "landscape" });
+        ScreenOrientation.lockAsync(
+          ScreenOrientation.OrientationLock.LANDSCAPE,
+        ).catch((error: unknown) =>
+          console.warn("Failed to lock landscape orientation:", error),
+        );
+        return;
+      }
+
+      // Leaving fullscreen: go straight to portrait, then re-assert shortly
+      // after to override any late orientation restore done by the WebView.
+      lockPortrait();
+      navigation.setOptions({ orientation: "portrait" });
+      orientationTimers.current = [200, 600].map((delay) =>
+        setTimeout(() => {
+          if (!isFullscreen.current) lockPortrait();
+        }, delay),
+      );
+    },
+    [navigation],
+  );
+
+  const resetFullscreen = useCallback(() => {
+    fullscreenFrames.current.clear();
+    if (isFullscreen.current) applyFullscreen(false);
+  }, [applyFullscreen]);
 
   useEffect(() => {
-    navigation.setOptions({ gestureEnabled: true });
+    navigation.setOptions({ gestureEnabled: true, orientation: "portrait" });
   }, [navigation]);
 
   useEffect(() => {
+    (async () => {
+      try {
+        previousLock.current = await ScreenOrientation.getOrientationLockAsync();
+      } catch (error) {
+        console.warn("Failed to read orientation lock:", error);
+      }
+      ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP,
+      ).catch((error: unknown) =>
+        console.warn("Failed to lock portrait orientation:", error),
+      );
+    })();
+
+    return () => {
+      // Make sure no pending portrait re-assertion overrides the restore below.
+      orientationTimers.current.forEach(clearTimeout);
+      orientationTimers.current = [];
+      StatusBar.setHidden(false, "fade");
+      ScreenOrientation.lockAsync(previousLock.current).catch((error: unknown) =>
+        console.warn("Failed to restore orientation lock:", error),
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     const onBackPress = () => {
-      if (canGoBack && webViewRef.current) {
+      if (isFullscreen.current) {
+        webViewRef.current?.injectJavaScript(EXIT_FULLSCREEN_SCRIPT);
+        setTimeout(() => {
+          if (isFullscreen.current) resetFullscreen();
+        }, 1000);
+        return true;
+      }
+      if (canGoBack.current && webViewRef.current) {
         webViewRef.current.goBack();
         return true;
       }
@@ -44,7 +338,7 @@ export default function VideoScreen() {
 
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [canGoBack]);
+  }, [resetFullscreen]);
 
   useEffect(() => {
     (async () => {
@@ -53,183 +347,80 @@ export default function VideoScreen() {
     })();
   }, []);
 
+  const source = useMemo(
+    () => ({
+      uri: `https://vidstuck.cc/embed/${type}/${id}/${seasonNumber}/${episodeNumber}?subtitle=${subtitle}&server=valstrax`,
+    }),
+    [type, id, seasonNumber, episodeNumber, subtitle],
+  );
+
   if (subtitle === null) return null;
 
-  const VIDEO_URL = `https://vidstuck.cc/embed/${type}/${id}/${seasonNumber}/${episodeNumber}?subtitle=${subtitle}&server=valstrax`;
+  function showDownloadUnavailable() {
+    if (downloadNoticeVisible.current) return;
+    downloadNoticeVisible.current = true;
+    Alert.alert(
+      "Not available",
+      "This feature is yet to be rolled out.",
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            downloadNoticeVisible.current = false;
+          },
+        },
+      ],
+      {
+        onDismiss: () => {
+          downloadNoticeVisible.current = false;
+        },
+      },
+    );
+  }
 
-  // Script injected before content loads to suppress popup redirects and click-jacking overlays
-  const AD_BLOCK_SCRIPT = `
-    (function() {
-      // 1. Allow workers.dev in window.open, otherwise block unwanted ad popups
-      const originalWindowOpen = window.open;
-      window.open = function(url) {
-        if (url && typeof url === 'string' && (url.includes('workers.dev') || url.includes('.mkv') || url.includes('.mp4') || url.includes('.bin'))) {
-          window.location.href = url;
-          return window;
-        }
-        return null;
-      };
+  function updateFullscreenState(frameId: string, active: boolean) {
+    if (active) {
+      fullscreenFrames.current.add(frameId);
+    } else {
+      fullscreenFrames.current.delete(frameId);
+    }
 
-      // 2. Allow download links to navigate directly in the webview
-      const originalClick = HTMLAnchorElement.prototype.click;
-      HTMLAnchorElement.prototype.click = function() {
-        if (this.href && (this.href.includes('workers.dev') || this.href.includes('.mkv') || this.href.includes('.mp4') || this.href.includes('.bin') || this.hasAttribute('download'))) {
-          this.target = '_self';
-          return originalClick.apply(this, arguments);
-        }
-        if (this.target === '_blank' || (this.href && !this.href.includes('vidstuck.xyz') && !this.href.includes('vidstuck.cc'))) {
-          return;
-        }
-        return originalClick.apply(this, arguments);
-      };
-
-      // 3. Ensure any click on a download link targets _self so it redirects in-page
-      document.addEventListener('click', function(e) {
-        const a = e.target && e.target.closest ? e.target.closest('a') : null;
-        if (a && (a.hasAttribute('download') || (a.href && (a.href.includes('workers.dev') || a.href.includes('.mkv') || a.href.includes('.mp4') || a.href.includes('.bin'))))) {
-          a.target = '_self';
-        }
-
-        if (a && (a.hasAttribute('download') || (a.href && (a.href.includes('workers.dev') || /\\.(mp4|mkv|bin)(?:[?#]|$)/i.test(a.href))))) {
-          const quality = a.querySelector('p.font-medium');
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: "download-request",
-            quality: quality ? quality.textContent.trim() : null
-          }));
-        }
-      }, true);
-
-      // 4. MutationObserver to auto-remove transparent ad overlays & popups
-      const removeAdOverlays = () => {
-        const overlays = document.querySelectorAll('div[style*="z-index"], iframe[src*="about:blank"], a[target="_blank"]');
-        overlays.forEach(el => {
-          if (el && el.parentNode && (el.style.zIndex > 100 || el.style.position === 'absolute' || el.style.position === 'fixed')) {
-            // Ensure video container and download elements are not deleted
-            if (!el.querySelector('video') && !el.closest('a[download]') && (!el.href || (!el.href.includes('workers.dev') && !el.href.includes('.mkv') && !el.href.includes('.mp4') && !el.href.includes('.bin')))) {
-              el.parentNode.removeChild(el);
-            }
-          }
-        });
-      };
-
-      document.addEventListener('DOMContentLoaded', () => {
-        removeAdOverlays();
-        setInterval(removeAdOverlays, 500);
-      });
-    })();
-    true;
-  `;
-
-  const FULLSCREEN_SCRIPT = `
-    (function() {
-      let isFullscreen = false;
-      let stateTimer;
-
-      const scheduleFullscreenEnter = () => {
-        window.clearTimeout(stateTimer);
-        stateTimer = window.setTimeout(() => {
-          if (isFullscreen) return;
-          isFullscreen = true;
-          window.ReactNativeWebView.postMessage("fullscreen-enter");
-        }, 200);
-      };
-
-      const fireFullscreenExit = () => {
-        window.clearTimeout(stateTimer);
-        if (!isFullscreen) return;
-        isFullscreen = false;
-        window.ReactNativeWebView.postMessage("fullscreen-exit");
-      };
-
-      const checkFullscreen = () => {
-        const nowFull = Boolean(
-          document.fullscreenElement || document.webkitFullscreenElement
-        );
-        if (nowFull) {
-          scheduleFullscreenEnter();
-        } else {
-          fireFullscreenExit();
-        }
-      };
-
-      document.addEventListener("fullscreenchange", checkFullscreen, true);
-      document.addEventListener("webkitfullscreenchange", checkFullscreen, true);
-      document.addEventListener("webkitbeginfullscreen", scheduleFullscreenEnter, true);
-      document.addEventListener("webkitendfullscreen", fireFullscreenExit, true);
-    })();
-    true;
-  `;
+    const isNowFullscreen = fullscreenFrames.current.size > 0;
+    if (isNowFullscreen === isFullscreen.current) return;
+    applyFullscreen(isNowFullscreen);
+  }
 
   function handleWebViewMessage(message: string) {
-    if (message === "fullscreen-enter") {
-      navigation.setOptions({ orientation: "landscape" });
-    } else if (message === "fullscreen-exit") {
-      navigation.setOptions({ orientation: "all" });
-    } else {
-      try {
-        const data = JSON.parse(message);
-        if (data.type === "open-url" && data.url) {
-          Linking.openURL(data.url).catch((err: unknown) =>
-            console.warn("Failed to open download URL:", err),
-          );
-        } else if (data.type === "download-request") {
-          pendingDownload.current = {
-            quality:
-              typeof data.quality === "string" ? data.quality.trim() : null,
-          };
-          downloadFlowActive.current = true;
+    try {
+      const data = JSON.parse(message);
+      if (data.type === "fullscreen-state") {
+        if (
+          typeof data.frameId === "string" &&
+          typeof data.active === "boolean"
+        ) {
+          updateFullscreenState(data.frameId, data.active);
         }
-      } catch {
-        // Ignore unrecognized messages
+      } else if (data.type === "download-unavailable") {
+        showDownloadUnavailable();
+      } else if (data.type === "open-url" && data.url) {
+        Linking.openURL(data.url).catch((error: unknown) =>
+          console.warn("Failed to open download URL:", error),
+        );
       }
+    } catch {
+      // Ignore unrecognized messages
     }
   }
 
-  function handleFileDownload(event: {
-    nativeEvent: {
-      downloadUrl: string;
-      userAgent?: string;
-      cookie?: string;
-    };
-  }) {
-    const { downloadUrl, userAgent, cookie } = event.nativeEvent;
-    if (!downloadUrl.toLowerCase().startsWith("https://")) {
-      console.warn("Ignoring non-HTTPS download URL");
-      downloadFlowActive.current = false;
-      pendingDownload.current = null;
-      return;
-    }
-
-    downloadFlowActive.current = false;
-    const request = pendingDownload.current;
-    pendingDownload.current = null;
-    const quality = request?.quality || "Download";
-    const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const safeType = type === "tv" ? "tv" : "movie";
-    const episodeSuffix =
-      type === "tv"
-        ? `-S${seasonNumber.replace(/\D/g, "") || "1"}E${episodeNumber.replace(/\D/g, "") || "1"}`
-        : "";
-    const safeQuality = quality.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const headers: Record<string, string> = {};
-    if (userAgent) headers["User-Agent"] = userAgent;
-    if (cookie) headers.Cookie = cookie;
-
-    void startDownload({
-      quality,
-      href: downloadUrl,
-      fileName: `${safeType}-${safeId}${episodeSuffix}-${safeQuality}.mp4`,
-      headers,
-      mediaId: id,
-      mediaType: safeType,
-    });
+  function handleFileDownload() {
+    showDownloadUnavailable();
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <WebView
         ref={webViewRef}
-        source={{ uri: VIDEO_URL }}
+        source={source}
         style={styles.webview}
         javaScriptEnabled
         domStorageEnabled
@@ -237,33 +428,29 @@ export default function VideoScreen() {
         mediaPlaybackRequiresUserAction={false}
         allowsPictureInPictureMediaPlayback
         allowsBackForwardNavigationGestures={true}
-        onNavigationStateChange={(navState: any) =>
-          setCanGoBack(navState.canGoBack)
-        }
+        onNavigationStateChange={(navState: any) => {
+          canGoBack.current = navState.canGoBack;
+        }}
+        onLoadStart={() => resetFullscreen()}
         sharedCookiesEnabled
         originWhitelist={["*"]}
-        // setSupportMultipleWindows={false}
+        setSupportMultipleWindows={false}
         onOpenWindow={(event: any) => {
           const targetUrl = event.nativeEvent.targetUrl;
-          if (
-            targetUrl &&
-            targetUrl.toLowerCase().startsWith("https://") &&
-            (targetUrl.includes("workers.dev") ||
-              targetUrl.includes(".mkv") ||
-              targetUrl.includes(".mp4") ||
-              targetUrl.includes(".bin"))
-          ) {
-            downloadFlowActive.current = true;
-            webViewRef.current?.injectJavaScript(
-              `window.location.href = ${JSON.stringify(targetUrl)}; true;`,
-            );
+          if (targetUrl && isDownloadRedirect(targetUrl)) {
+            showDownloadUnavailable();
           }
           event.preventDefault();
         }}
         allowsFullscreenVideo={true}
-        injectedJavaScriptBeforeContentLoaded={AD_BLOCK_SCRIPT}
+        injectedJavaScriptBeforeContentLoaded={PLAYER_SCRIPT}
+        injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
         injectedJavaScript={FULLSCREEN_SCRIPT}
+        injectedJavaScriptForMainFrameOnly={false}
         onMessage={(event: any) => handleWebViewMessage(event.nativeEvent.data)}
+        onFileDownload={
+          Platform.OS === "android" ? handleFileDownload : undefined
+        }
         onShouldStartLoadWithRequest={(request: {
           url: string;
           navigationType?: string;
@@ -271,41 +458,26 @@ export default function VideoScreen() {
         }) => {
           const { url } = request;
 
-          // Keep the verification and final-file redirects inside this WebView.
+          if (isDownloadRedirect(url)) {
+            showDownloadUnavailable();
+            return false;
+          }
+
           const isAllowed =
             url.includes("vidstuck.cc") ||
             url.includes("sacdn.hakunaymatata.com") ||
-            url.includes("workers.dev") ||
             url.includes("cloudflare.com") ||
             url.includes("about:blank") ||
             url.includes(".m4s") ||
-            url.includes(".m3u8") ||
-            url.includes(".mp4") ||
-            url.includes(".mkv");
+            url.includes(".m3u8");
 
-          if (
-            isAllowed ||
-            (downloadFlowActive.current &&
-              url.toLowerCase().startsWith("https://"))
-          ) {
-            return true;
-          }
-
-          if (
-            request.navigationType === "click" &&
-            request.isTopFrame !== false &&
-            url.toLowerCase().startsWith("https://")
-          ) {
-            downloadFlowActive.current = true;
+          if (isAllowed) {
             return true;
           }
 
           // Block all external popup redirects on player clicks
           return false;
         }}
-        onFileDownload={
-          Platform.OS === "android" ? handleFileDownload : undefined
-        }
       />
     </SafeAreaView>
   );
