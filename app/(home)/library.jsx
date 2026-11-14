@@ -1,6 +1,6 @@
+import Text from "@/components/AppText";
 import MovieCard from "@/components/Moviecard";
 import SearchScreenSkeleton from "@/components/SearchScreenSkeleton";
-import Text from "@/components/AppText";
 import { deleteMeta, DOWNLOAD_DIR, ensureMeta } from "@/services/DownloadMeta";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as FileSystem from "expo-file-system/legacy";
@@ -80,8 +80,7 @@ export default function LibraryScreen() {
     }
   }
 
-  // Reads the downloads folder. Titles and posters come from files saved next
-  // to each video, so this works offline.
+
   async function loadDownloadedItems() {
     try {
       const folder = await FileSystem.getInfoAsync(DOWNLOAD_DIR);
@@ -115,8 +114,7 @@ export default function LibraryScreen() {
 
       const withDetails = await Promise.all(
         entries.map(async (entry) => {
-          // Uses the saved copy; for older downloads it looks them up online
-          // once and saves them, so they work offline from then on
+
           const meta = await ensureMeta(entry.name, entry.id, entry.media_type);
           return {
             ...entry,
@@ -295,7 +293,7 @@ export default function LibraryScreen() {
         <Text
           style={{ color: subTextColor, textAlign: "center", marginTop: 40 }}
         >
-          This feature has not been rolled out yet
+          This feature has not been rolled out yet. All downloads will be done in the browser.
         </Text>
       ) : (
         <FlatList

@@ -4,10 +4,8 @@ import { useLocalSearchParams, useNavigation } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   BackHandler,
   Linking,
-  Platform,
   StatusBar,
   StyleSheet,
 } from "react-native";
@@ -21,7 +19,7 @@ function isDownloadRedirect(url: string) {
   );
 }
 
-// Block download actions while filtering unrelated ad popups.
+// Downloads are sent to the system browser (via an "open-url" message).
 // Overlay removal is conservative and fully disabled while fullscreen,
 // because removing the fullscreen element (or an ancestor) exits fullscreen.
 const AD_BLOCK_SCRIPT = `
@@ -32,19 +30,20 @@ const AD_BLOCK_SCRIPT = `
     const isDownloadRedirect = url =>
       typeof url === 'string' &&
       (url.toLowerCase().includes('workers.dev') || /\\.(mp4|mkv|bin)(?:[?#]|$)/i.test(url));
-    const reportDownloadBlocked = () => {
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: "download-unavailable"
-        }));
-      }
+
+    const openExternal = url => {
+      if (!url || !window.ReactNativeWebView) return;
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: "open-url",
+        url: String(url)
+      }));
     };
 
     // Lock window.open so ad scripts can't restore it and open popups
     // (a popup window being created exits fullscreen on Android).
     const blockedOpen = function(url) {
       if (typeof url === 'string' && isDownloadRedirect(url)) {
-        reportDownloadBlocked();
+        openExternal(url);
       }
       return null;
     };
@@ -61,7 +60,7 @@ const AD_BLOCK_SCRIPT = `
     const originalClick = HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click = function() {
       if (isDownloadRedirect(this.href) || this.hasAttribute('download')) {
-        reportDownloadBlocked();
+        openExternal(this.href);
         return;
       }
       if (this.target === '_blank' || (this.href && !this.href.includes('vidstuck.xyz') && !this.href.includes('vidstuck.cc'))) {
@@ -70,25 +69,13 @@ const AD_BLOCK_SCRIPT = `
       return originalClick.apply(this, arguments);
     };
 
-    // Download blocking
+    // Download links: open in the system browser instead of the WebView.
     document.addEventListener('click', function(e) {
       const a = e.target && e.target.closest ? e.target.closest('a') : null;
-      const control = e.target && e.target.closest
-        ? e.target.closest('a, button, [role="button"], input[type="button"], input[type="submit"]')
-        : null;
-      const label = control
-        ? [control.textContent, control.getAttribute('aria-label'), control.getAttribute('title'), control.getAttribute('value')]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
-        : '';
-      if (
-        (a && (a.hasAttribute('download') || isDownloadRedirect(a.href))) ||
-        /\\bdownload\\b/i.test(label)
-      ) {
+      if (a && (a.hasAttribute('download') || isDownloadRedirect(a.href))) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        reportDownloadBlocked();
+        openExternal(a.href);
       }
     }, true);
 
@@ -238,7 +225,7 @@ export default function VideoScreen() {
   const [subtitle, setSubtitle] = useState<string | null>(null);
   const webViewRef = useRef<any>(null);
   const canGoBack = useRef(false);
-  const downloadNoticeVisible = useRef(false);
+  const lastOpened = useRef({ url: "", time: 0 });
   const fullscreenFrames = useRef(new Set<string>());
   const isFullscreen = useRef(false);
   const orientationTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -356,25 +343,20 @@ export default function VideoScreen() {
 
   if (subtitle === null) return null;
 
-  function showDownloadUnavailable() {
-    if (downloadNoticeVisible.current) return;
-    downloadNoticeVisible.current = true;
-    Alert.alert(
-      "Not available",
-      "This feature is yet to be rolled out.",
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            downloadNoticeVisible.current = false;
-          },
-        },
-      ],
-      {
-        onDismiss: () => {
-          downloadNoticeVisible.current = false;
-        },
-      },
+  // Opens a download link in the system browser. Several handlers can fire
+  // for a single tap, so the same URL is ignored if opened within 2 seconds.
+  function openInBrowser(url?: string | null) {
+    if (!url || !/^https?:\/\//i.test(url)) return;
+    const now = Date.now();
+    if (
+      lastOpened.current.url === url &&
+      now - lastOpened.current.time < 2000
+    ) {
+      return;
+    }
+    lastOpened.current = { url, time: now };
+    Linking.openURL(url).catch((error: unknown) =>
+      console.warn("Failed to open download URL:", error),
     );
   }
 
@@ -400,20 +382,12 @@ export default function VideoScreen() {
         ) {
           updateFullscreenState(data.frameId, data.active);
         }
-      } else if (data.type === "download-unavailable") {
-        showDownloadUnavailable();
-      } else if (data.type === "open-url" && data.url) {
-        Linking.openURL(data.url).catch((error: unknown) =>
-          console.warn("Failed to open download URL:", error),
-        );
+      } else if (data.type === "open-url" && typeof data.url === "string") {
+        openInBrowser(data.url);
       }
     } catch {
       // Ignore unrecognized messages
     }
-  }
-
-  function handleFileDownload() {
-    showDownloadUnavailable();
   }
 
   return (
@@ -438,7 +412,7 @@ export default function VideoScreen() {
         onOpenWindow={(event: any) => {
           const targetUrl = event.nativeEvent.targetUrl;
           if (targetUrl && isDownloadRedirect(targetUrl)) {
-            showDownloadUnavailable();
+            openInBrowser(targetUrl);
           }
           event.preventDefault();
         }}
@@ -448,8 +422,8 @@ export default function VideoScreen() {
         injectedJavaScript={FULLSCREEN_SCRIPT}
         injectedJavaScriptForMainFrameOnly={false}
         onMessage={(event: any) => handleWebViewMessage(event.nativeEvent.data)}
-        onFileDownload={
-          Platform.OS === "android" ? handleFileDownload : undefined
+        onFileDownload={(event: any) =>
+          openInBrowser(event.nativeEvent.downloadUrl)
         }
         onShouldStartLoadWithRequest={(request: {
           url: string;
@@ -459,7 +433,7 @@ export default function VideoScreen() {
           const { url } = request;
 
           if (isDownloadRedirect(url)) {
-            showDownloadUnavailable();
+            openInBrowser(url);
             return false;
           }
 
