@@ -1,5 +1,4 @@
 import {
-  AndroidImportance,
   IosAuthorizationStatus,
   SchedulableTriggerInputTypes,
   cancelScheduledNotificationAsync,
@@ -7,11 +6,8 @@ import {
   getPermissionsAsync,
   requestPermissionsAsync,
   scheduleNotificationAsync,
-  setNotificationChannelAsync,
 } from "expo-notifications";
-import { Platform } from "react-native";
 
-export const RELEASE_REMINDER_CHANNEL_ID = "release-reminders";
 export type ReleaseDetailsRoute = "details" | "tvdetails";
 
 export async function cancelReleaseReminder(identifier: string): Promise<void> {
@@ -42,13 +38,6 @@ export async function findReleaseReminder(
 }
 
 async function ensureNotificationPermission(): Promise<boolean> {
-  if (Platform.OS === "android") {
-    await setNotificationChannelAsync(RELEASE_REMINDER_CHANNEL_ID, {
-      name: "Release reminders",
-      importance: AndroidImportance.DEFAULT,
-    });
-  }
-
   let permissions = await getPermissionsAsync();
   const hasPermission = () =>
     permissions.granted ||
@@ -78,9 +67,6 @@ export async function scheduleReleaseReminder(
     trigger: {
       type: SchedulableTriggerInputTypes.DATE,
       date: releaseTimestamp,
-      ...(Platform.OS === "android"
-        ? { channelId: RELEASE_REMINDER_CHANNEL_ID }
-        : {}),
     },
   });
 }
