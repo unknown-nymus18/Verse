@@ -28,6 +28,7 @@ type DownloadRequest = {
   quality: string | null;
   href: string;
   fileName: string;
+  headers?: Record<string, string>;
   mediaId?: string; // used to save the title and poster
   mediaType?: string;
 };
@@ -192,11 +193,14 @@ async function validateMp4(uri: string): Promise<Check> {
 // ---------------------------------------------------------------------------
 
 // Finds the file size and whether the server answers byte-range requests
-async function probeSource(href: string): Promise<Probe> {
+async function probeSource(
+  href: string,
+  headers: Record<string, string>,
+): Promise<Probe> {
   const controller = new AbortController();
   try {
     const response = await fetch(href, {
-      headers: { ...HEADERS, Range: "bytes=0-0" },
+      headers: { ...HEADERS, ...headers, Range: "bytes=0-0" },
       signal: controller.signal,
     });
     const contentRange = response.headers.get("content-range");
@@ -228,6 +232,7 @@ async function fetchChunk(
   chunkUri: string,
   start: number,
   end: number,
+  headers: Record<string, string>,
   onBytes: (written: number) => void,
 ): Promise<Uint8Array> {
   const expectedLength = end - start + 1;
@@ -236,7 +241,7 @@ async function fetchChunk(
   const task = FileSystem.createDownloadResumable(
     href,
     chunkUri,
-    { headers: { ...HEADERS, Range: `bytes=${start}-${end}` } },
+    { headers: { ...HEADERS, ...headers, Range: `bytes=${start}-${end}` } },
     (progress) => onBytes(progress.totalBytesWritten),
   );
 
@@ -295,6 +300,7 @@ async function downloadChunked(
   href: string,
   partUri: string,
   total: number,
+  headers: Record<string, string>,
   onPercent: (percent: number | null) => void,
   onWaiting: () => void,
 ): Promise<number> {
@@ -342,8 +348,13 @@ async function downloadChunked(
     const end = Math.min(start + CHUNK_SIZE, total) - 1;
 
     try {
-      const bytes = await fetchChunk(href, chunkUri, start, end, (written) =>
-        report(start + written),
+      const bytes = await fetchChunk(
+        href,
+        chunkUri,
+        start,
+        end,
+        headers,
+        (written) => report(start + written),
       );
       writeAt(partUri, start, bytes);
       committed = end + 1;
@@ -390,6 +401,7 @@ async function downloadWhole(
   href: string,
   partUri: string,
   expectedSize: number | null,
+  headers: Record<string, string>,
   onPercent: (percent: number | null) => void,
   onWaiting: () => void,
 ): Promise<void> {
@@ -404,7 +416,7 @@ async function downloadWhole(
     const task = FileSystem.createDownloadResumable(
       href,
       partUri,
-      { headers: HEADERS },
+      { headers: { ...HEADERS, ...headers } },
       (progress) => {
         if (progress.totalBytesExpectedToWrite <= 0) {
           onPercent(null);
@@ -544,6 +556,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       quality,
       href,
       fileName,
+      headers = {},
       mediaId,
       mediaType,
     }: DownloadRequest) => {
@@ -593,7 +606,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
             waiting: true,
           }));
 
-        const probe = await probeSource(href);
+        const probe = await probeSource(href, headers);
         console.log(
           "Expected size:",
           probe.size ?? "unknown",
@@ -609,6 +622,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
             href,
             partUri,
             probe.size,
+            headers,
             onPercent,
             onWaiting,
           );
@@ -623,6 +637,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
               href,
               partUri,
               probe.size,
+              headers,
               onPercent,
               onWaiting,
             );
@@ -630,7 +645,14 @@ export function DownloadProvider({ children }: PropsWithChildren) {
             console.log("Second video check:", check.ok ? "ok" : check.reason);
           }
         } else {
-          await downloadWhole(href, partUri, probe.size, onPercent, onWaiting);
+          await downloadWhole(
+            href,
+            partUri,
+            probe.size,
+            headers,
+            onPercent,
+            onWaiting,
+          );
           check = await validateMp4(partUri);
           console.log("Video check:", check.ok ? "ok" : check.reason);
         }

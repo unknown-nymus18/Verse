@@ -554,7 +554,7 @@ export default function DetailsScreen() {
         </View>
       )}
 
-      <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+      {/* <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}> */}
         <ScrollView
           style={styles.body}
           contentContainerStyle={styles.bodyContent}
@@ -719,7 +719,7 @@ export default function DetailsScreen() {
             </>
           )}
         </ScrollView>
-      </SafeAreaView>
+      {/* </SafeAreaView> */}
     </View>
   );
 }

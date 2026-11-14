@@ -407,7 +407,7 @@ export default function TvDetails() {
           </Pressable>
         </View>
       )}
-      <SafeAreaView edges={["bottom"]} style={styles.bottomSafeArea}>
+      {/* <SafeAreaView edges={["bottom"]} style={styles.bottomSafeArea}> */}
         <ScrollView
           style={styles.body}
           contentContainerStyle={styles.bodyContent}
@@ -663,7 +663,7 @@ export default function TvDetails() {
             </>
           )}
         </ScrollView>
-      </SafeAreaView>
+      {/* </SafeAreaView> */}
     </View>
   );
 }
